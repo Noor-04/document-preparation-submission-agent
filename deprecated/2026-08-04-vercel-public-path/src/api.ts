@@ -1,5 +1,4 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
-import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ADAPTER_NAMES } from './adapters.js';
@@ -26,8 +25,7 @@ import type { DB } from './db.js';
 import { allowlistFromEnv } from './policy.js';
 import { getSubmission, listSubmissions, processSubmission, queueSubmission, tick, type Env } from './submissions.js';
 
-const sourceRelativePublic = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'public');
-const publicDir = existsSync(join(process.cwd(), 'public')) ? join(process.cwd(), 'public') : sourceRelativePublic;
+const publicDir = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'public');
 
 declare module 'express-serve-static-core' {
   interface Request {

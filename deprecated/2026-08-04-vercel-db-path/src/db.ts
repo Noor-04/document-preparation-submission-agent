@@ -1,14 +1,11 @@
 import Database from 'better-sqlite3';
-import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export type DB = Database.Database;
 
-const sourceRelativeMigrations = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'migrations');
-const migrationsDir = existsSync(join(process.cwd(), 'migrations'))
-  ? join(process.cwd(), 'migrations')
-  : sourceRelativeMigrations;
+const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'migrations');
 
 /** Open a database and apply any migrations it has not seen yet. */
 export function openDb(file = process.env.DB_FILE ?? 'data/app.db'): DB {

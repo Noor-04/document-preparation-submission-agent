@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "{migrations,public}/**",
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api" }
+  ]
+}

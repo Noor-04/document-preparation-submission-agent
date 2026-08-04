@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "api/index.ts",
   "description": "MVP Document Preparation and Submission Agent (local demo, not production ready)",
   "engines": { "node": ">=20.6" },
   "scripts": {
