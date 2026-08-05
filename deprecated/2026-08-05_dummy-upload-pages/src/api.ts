@@ -23,7 +23,6 @@ import {
   type User,
 } from './core.js';
 import type { DB } from './db.js';
-import { dummyUploadRouter } from './dummy-upload.js';
 import { allowlistFromEnv } from './policy.js';
 import { getSubmission, listSubmissions, processSubmission, queueSubmission, tick, type Env } from './submissions.js';
 
@@ -161,12 +160,6 @@ export function createApp(db: DB, opts: Env = {}): express.Express {
     actor(req);
     res.json(verifyAudit(db));
   }));
-
-  // Isolated dummy upload pages for browser-agent testing. Unauthenticated on
-  // purpose, so they stay off in production unless explicitly switched on.
-  if (env.NODE_ENV !== 'production' || env.DUMMY_UPLOAD_PAGES === 'true') {
-    app.use('/dummy', dummyUploadRouter(env));
-  }
 
   app.use(express.static(publicDir));
 
