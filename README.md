@@ -161,7 +161,7 @@ All routes need `Authorization: Bearer <token>` except `GET /api/config`.
 |---|---|---|
 | GET | `/api/config` | actions, adapters, allowlist, whether simulation is allowed |
 | GET/POST | `/api/registrations` | list / create |
-| GET/PATCH | `/api/registrations/:id` | full detail bundle / amend (invalidates packages) |
+| GET/PATCH | `/api/registrations/:id` | full detail bundle / amend — preparer only (invalidates packages) |
 | POST | `/api/registrations/:id/documents` | register or replace a document |
 | GET | `/api/registrations/:id/checks` | current findings |
 | POST | `/api/registrations/:id/packages` | assemble a versioned package |

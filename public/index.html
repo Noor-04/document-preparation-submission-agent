@@ -41,18 +41,30 @@
   ul.list li:hover { border-color:var(--line); }
   ul.list li.sel { background:var(--bg); border-color:var(--accent); }
   .muted { color:var(--muted); }
+  #login { max-width:380px; margin:12vh auto; }
+  #app { display:none; }
   #toast { position:fixed; right:1rem; bottom:1rem; max-width:420px; background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:8px; padding:.6rem .8rem; box-shadow:0 6px 22px rgba(0,0,0,.12); display:none; white-space:pre-wrap; }
   #toast.err { border-left-color:var(--bad); }
   details summary { cursor:pointer; color:var(--muted); font-size:12px; }
 </style>
 </head>
 <body>
+<section id="login">
+  <h1>Sign in</h1>
+  <p class="muted">Document Preparation &amp; Submission Agent</p>
+  <label>Username<input id="login-user" autocomplete="username" value="admin"></label>
+  <label>Password<input id="login-pass" type="password" autocomplete="current-password"></label>
+  <button id="login-go" style="margin-top:.7rem">Login</button>
+  <p id="login-error" class="bad" aria-live="polite"></p>
+</section>
+<div id="app">
 <header>
   <h1>Document Preparation &amp; Submission Agent</h1>
   <label style="margin:0">Acting as
     <select id="who"></select>
   </label>
   <span id="cfg" class="muted mono"></span>
+  <button id="logout" class="ghost">Logout</button>
 </header>
 <div class="banner">MVP / local demo. No real portal adapter exists — <code>live</code> submissions always fail closed with <code>PORTAL_NO_ADAPTER</code>. The <code>mock</code> adapter is a local sandbox and is refused when <code>NODE_ENV=production</code>. CAPTCHA, MFA and legal declarations always stop for a human.</div>
 
@@ -72,6 +84,7 @@
   <div id="detail"><section><h2>Detail</h2><p class="muted">Select a registration.</p></section></div>
 </main>
 <div id="toast"></div>
+</div>
 
 <script type="module">
 const $ = (s, r = document) => r.querySelector(s);
@@ -81,7 +94,7 @@ const TOKENS = {
   'Omar (approver)': 'demo-approver-token',
   'Lena (submitter)': 'demo-submitter-token',
 };
-let token = localStorage.getItem('token') || TOKENS['Priya (preparer)'];
+let token = localStorage.getItem('token');
 let selected = null, cfg = { actions: [], adapters: [], allowlist: [] };
 
 function toast(msg, isErr) {
@@ -94,6 +107,7 @@ function toast(msg, isErr) {
 }
 
 async function api(path, method = 'GET', body) {
+  if (!token) throw new Error('Please log in first');
   const res = await fetch('/api' + path, {
     method,
     headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
@@ -103,6 +117,24 @@ async function api(path, method = 'GET', body) {
   if (!res.ok) throw new Error(`${data.error || res.status}: ${data.message || ''}` +
     (data.details ? '\n' + data.details.map((d) => `• ${d.code} ${d.message}`).join('\n') : ''));
   return data;
+}
+
+function showApp() {
+  $('#login').style.display = 'none';
+  $('#app').style.display = 'block';
+}
+
+async function login() {
+  const res = await fetch('/api/login', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ username: $('#login-user').value, password: $('#login-pass').value }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Login failed');
+  token = data.token;
+  localStorage.setItem('token', token);
+  showApp();
+  await start();
 }
 
 const sevClass = (s) => (s === 'BLOCKING' ? 'bad' : 'warn');
@@ -273,9 +305,16 @@ $('#n-go').onclick = () => api('/registrations', 'POST', {
   jurisdiction: $('#n-jur').value, reg_type: $('#n-type').value,
 }).then((r) => select(r.id)).then(loadRegs).catch((e) => toast(e.message, true));
 
-cfg = await api('/config');
-$('#cfg').textContent = `${cfg.production ? 'PRODUCTION' : 'development'} · sandbox ${cfg.simulation_allowed ? 'enabled' : 'refused'}`;
-await loadRegs();
+async function start() {
+  cfg = await api('/config');
+  $('#cfg').textContent = `${cfg.production ? 'PRODUCTION' : 'development'} · sandbox ${cfg.simulation_allowed ? 'enabled' : 'refused'}`;
+  await loadRegs();
+}
+
+$('#login-go').onclick = () => login().catch((e) => { $('#login-error').textContent = e.message; });
+$('#login-pass').onkeydown = (e) => { if (e.key === 'Enter') $('#login-go').click(); };
+$('#logout').onclick = () => { localStorage.removeItem('token'); location.reload(); };
+if (token && Object.values(TOKENS).includes(token)) { showApp(); start().catch((e) => toast(e.message, true)); }
 </script>
 </body>
 </html>

@@ -52,6 +52,19 @@ export function createApp(db: DB, opts: Env = {}): express.Express {
   const app = express();
   app.use(express.json({ limit: '1mb' }));
 
+  app.post('/api/login', (req, res) => {
+    if (req.body?.username !== 'admin' || req.body?.password !== 'admin') {
+      res.status(401).json({ error: 'INVALID_LOGIN', message: 'invalid username or password' });
+      return;
+    }
+    const user = db.prepare("SELECT * FROM users WHERE role = 'preparer' LIMIT 1").get() as User | undefined;
+    if (!user) {
+      res.status(500).json({ error: 'LOGIN_UNAVAILABLE', message: 'no preparer account is configured' });
+      return;
+    }
+    res.json({ token: user.token, user: { name: user.name, role: user.role } });
+  });
+
   app.use((req, _res, next) => {
     const token = (req.header('authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
     if (token) {

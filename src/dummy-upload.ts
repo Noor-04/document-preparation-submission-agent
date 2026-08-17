@@ -24,6 +24,7 @@ const EVERY_COUNTRY = 'Every country';
 interface DocTypeDef {
   key: string;
   name: string;
+  expected_filename?: string;
   country: string;
   lead_days: number;
   grace_days: number;
@@ -31,6 +32,10 @@ interface DocTypeDef {
 }
 
 const DOC_TYPES: DocTypeDef[] = [
+  { key: 'sedar_cr', name: 'Commercial Registration Certificate', expected_filename: 'Sedar-BI-Group-CR.pdf', country: 'SA', lead_days: 30, grace_days: 0, upload_only: true },
+  { key: 'sedar_vat', name: 'VAT Registration Certificate', expected_filename: 'Sedar-BI-Group-VAT-Certificate.pdf', country: 'SA', lead_days: 30, grace_days: 0, upload_only: true },
+  { key: 'sedar_bank_iban', name: 'Official Bank Details / IBAN Certificate', expected_filename: 'Sedar-BI-Group-Bank-IBAN.pdf', country: 'SA', lead_days: 30, grace_days: 0, upload_only: true },
+  { key: 'sedar_national_address', name: 'Saudi National Address Certificate', country: 'SA', lead_days: 30, grace_days: 0, upload_only: true },
   { key: 'commercial_registration', name: 'Commercial Registration', country: 'SA', lead_days: 30, grace_days: 0 },
   { key: 'company_profile', name: 'Company Profile', country: EVERY_COUNTRY, lead_days: 0, grace_days: 0, upload_only: true },
   { key: 'company_registration_certificate', name: 'Company Registration Certificate', country: 'SA', lead_days: 30, grace_days: 30 },
@@ -116,6 +121,7 @@ const COUNTRIES = ['AE', 'SA', 'GB', 'NL', 'DE', 'US'];
 const ENTITY_TYPES = ['llc', 'sole_establishment', 'branch', 'partnership'];
 const SERVICE_CATEGORIES = ['it_services', 'logistics', 'consulting', 'facilities'];
 const REVENUE_BANDS = ['under_1m', '1m_to_5m', '5m_to_25m', '25m_plus'];
+const SEDAR_DRAFT_ID = '310d0528-da0e-4bb8-800b-84486e0dc7df';
 
 export interface StoredFile {
   field: string;
@@ -372,6 +378,12 @@ function initialState(id: string): WizardState {
   };
 }
 
+function sedarDraft(): WizardState {
+  const state = initialState(SEDAR_DRAFT_ID);
+  state.selected_documents = ['sedar_cr', 'sedar_vat', 'sedar_bank_iban', 'sedar_national_address'];
+  return state;
+}
+
 function applyTemplate(id: string, templateKey: string): WizardState {
   const state = initialState(id);
   const template = COMPANY_TEMPLATES.find((entry) => entry.key === templateKey);
@@ -489,6 +501,7 @@ function renderLayout(title: string, result: string, aside: string, body: string
 <header>
   <h1>Supplier Registration Portal</h1>
   <p>Multi-step legal entity onboarding for automation and human review.</p>
+  ${result !== 'login' ? '<form method="post" action="/dummy/vendor-registration/logout" style="margin-left:auto"><button type="submit" class="secondary">Logout</button></form>' : ''}
 </header>
 <main>
   <div class="banner">Dummy portal for browser-agent testing. It behaves like a production form, but data is stored only in a temporary workspace.</div>
@@ -544,7 +557,7 @@ function renderTemplatePicker(): string {
         <h2>Company presets</h2>
         <p>${esc(copy.pickerLead)}</p>
       </div>
-      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length}</strong><small class="muted">10 pages each</small></div>
+      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 3}</strong><small class="muted">10 pages each</small></div>
     </aside>`,
     `<section class="card">
       <div class="hero">
@@ -555,6 +568,18 @@ function renderTemplatePicker(): string {
         </div>
       </div>
       <div class="checkbox-grid">
+        <div class="doc-card" style="border-color:var(--accent)">
+          <strong>Quick Vendor Registration Portal</strong>
+          <small>One page · reduced fields · shuffled details</small>
+          <p class="muted">A shorter vendor form with company details and four required document filenames.</p>
+          <a href="/dummy/vendor-registration/quick"><button type="button" style="margin-top:.8rem">Open one-page portal</button></a>
+        </div>
+        <div class="doc-card" style="border-color:var(--accent)">
+          <strong>Sedar BI Group vendor registration</strong>
+          <small>Saudi Arabia · LLC · 4 required documents</small>
+          <p class="muted">Use this preconfigured form for Sedar BI Group with CR, VAT, IBAN and National Address documents.</p>
+          <a href="/dummy/vendor-registration/${SEDAR_DRAFT_ID}/page/1"><button type="button" style="margin-top:.8rem">Open Sedar BI Group form</button></a>
+        </div>
         ${COMPANY_TEMPLATES.map((template) => `<form method="post" action="/dummy/vendor-registration/start" class="doc-card">
           <input type="hidden" name="template" value="${esc(template.key)}">
           <strong>${esc(template.label)}</strong>
@@ -570,6 +595,53 @@ function renderTemplatePicker(): string {
           <button type="submit" id="start_blank" style="margin-top:.8rem">Start blank flow</button>
         </form>
       </div>
+    </section>`,
+  );
+}
+
+function renderQuickVendor(errors: string[] = [], values: Record<string, string> = {}): string {
+  const value = (key: string): string => esc(values[key] ?? '');
+  const errorBlock = errors.length
+    ? `<div class="errors"><strong>Please complete all required fields</strong><ul>${errors.map((error) => `<li>${esc(error)}</li>`).join('')}</ul></div>`
+    : '';
+  return renderLayout(
+    'Quick Vendor Registration',
+    'form',
+    '<aside class="aside"><div class="eyebrow">One-page portal</div><h2>Vendor intake</h2><p class="muted">Reduced fields for a fast registration submission.</p></aside>',
+    `<section class="card"><div class="hero"><div><div class="eyebrow">Vendor registration</div><h2>Register your company</h2><p>All fields below are required.</p></div></div>
+      ${errorBlock}
+      <form method="post" action="/dummy/vendor-registration/quick" enctype="multipart/form-data">
+        <div class="grid two">
+          <div class="field"><label for="contact_email">Contact email *</label><input id="contact_email" name="contact_email" type="email" value="${value('contact_email')}" required></div>
+          <div class="field"><label for="entity_type">Entity type *</label><select id="entity_type" name="entity_type" required><option value="">Select entity type</option>${ENTITY_TYPES.map((type) => `<option value="${type}"${values.entity_type === type ? ' selected' : ''}>${esc(type.replace(/_/g, ' '))}</option>`).join('')}</select></div>
+          <div class="field"><label for="company_name">Company legal name *</label><input id="company_name" name="company_name" value="${value('company_name')}" required></div>
+          <div class="field"><label for="country">Country *</label><select id="country" name="country" required><option value="">Select country</option>${COUNTRIES.map((country) => `<option value="${country}"${values.country === country ? ' selected' : ''}>${country}</option>`).join('')}</select></div>
+        </div>
+        <h3 style="margin-top:1.2rem">Required documents</h3>
+        <div class="grid two">
+          <div class="field"><label for="cr_copy">CR copy PDF *</label><input id="cr_copy" name="cr_copy" type="file" accept=".pdf" required></div>
+          <div class="field"><label for="vat_certificate">VAT certificate PDF *</label><input id="vat_certificate" name="vat_certificate" type="file" accept=".pdf" required></div>
+          <div class="field"><label for="bank_iban">Bank / IBAN PDF *</label><input id="bank_iban" name="bank_iban" type="file" accept=".pdf" required></div>
+          <div class="field"><label for="national_address">National Address PDF *</label><input id="national_address" name="national_address" type="file" accept=".pdf" required></div>
+        </div>
+        <button type="submit" style="margin-top:1rem">Submit registration</button>
+      </form>
+    </section>`,
+  );
+}
+function renderLogin(error = '', returnTo = '/dummy/vendor-registration'): string {
+  return renderLayout(
+    'Sign in',
+    'login',
+    '<aside class="aside"><div class="eyebrow">Protected portal</div><h2>Vendor registration</h2><p class="muted">Sign in to begin the registration flow.</p></aside>',
+    `<section class="card" style="max-width:420px"><div class="eyebrow">Authentication</div><h2>Sign in</h2>
+      ${error ? `<p class="error">${esc(error)}</p>` : ''}
+      <form method="post" action="/dummy/vendor-registration/login">
+        <input type="hidden" name="return_to" value="${esc(returnTo)}">
+        <label>Username<input name="username" autocomplete="username" value="admin" required></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit" style="margin-top:1rem">Login</button>
+      </form>
     </section>`,
   );
 }
@@ -638,7 +710,7 @@ function docFields(state: WizardState, keys: string[], page: number): string {
         <p><span class="pill">${esc(doc.country)}</span><span class="pill">Lead ${doc.lead_days} days</span><span class="pill">Grace ${doc.grace_days} days</span></p>
         ${current.file ? `<p class="muted">Current file: <span class="mono">${esc(current.file.original_name)}</span></p>` : '<p class="muted">No file uploaded yet.</p>'}
         ${details}
-        <div class="field" style="margin-top:.8rem"><label for="doc_file_${key}">Upload ${esc(doc.name)} file${current.file ? ' (leave blank to keep current file)' : ''}</label><input id="doc_file_${key}" name="doc_file_${key}" type="file" accept="${accept}"></div>
+        <div class="field" style="margin-top:.8rem"><label for="doc_file_${key}">Upload ${esc(doc.name)} file${current.file ? ' (leave blank to keep current file)' : ''}</label>${doc.expected_filename ? `<p class="muted">Required filename: <span class="mono">${esc(doc.expected_filename)}</span></p>` : ''}<input id="doc_file_${key}" name="doc_file_${key}" type="file" accept="${accept}"></div>
       </section>`;
     })
     .join('');
@@ -864,6 +936,12 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
   const draftPath = (id: string): string => join(draftDir(id), 'draft.json');
   const receiptDir = (id: string): string => join(submissionsRoot, id);
   const receiptPath = (id: string): string => join(receiptDir(id), 'receipt.json');
+  const sessions = new Set<string>();
+  const isLoggedIn = (req: Request): boolean => {
+    const cookie = req.header('cookie') ?? '';
+    const session = cookie.match(/(?:^|;\s*)dummy_session=([^;]+)/)?.[1];
+    return Boolean(session && sessions.has(session));
+  };
 
   const router = Router();
   router.use(urlencoded({ extended: true }));
@@ -877,8 +955,19 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
   const readDraft = async (id: string): Promise<WizardState | undefined> => {
     if (!UUID.test(id)) return undefined;
     try {
-      return JSON.parse(await readFile(draftPath(id), 'utf8')) as WizardState;
+      const state = JSON.parse(await readFile(draftPath(id), 'utf8')) as WizardState;
+      if (id === SEDAR_DRAFT_ID) {
+        const preset = sedarDraft();
+        state.selected_documents = preset.selected_documents;
+        await saveDraft(state);
+      }
+      return state;
     } catch {
+      if (id === SEDAR_DRAFT_ID) {
+        const state = sedarDraft();
+        await saveDraft(state);
+        return state;
+      }
       return undefined;
     }
   };
@@ -908,11 +997,73 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
     return undefined;
   };
 
-  router.get('/vendor-registration', (_req, res) => {
-    res.type('html').send(renderTemplatePicker());
+  router.get('/vendor-registration', (req, res) => {
+    res.type('html').send(isLoggedIn(req) ? renderTemplatePicker() : renderLogin());
+  });
+
+  router.post('/vendor-registration/login', (req, res) => {
+    if (req.body?.username !== 'admin' || req.body?.password !== 'admin') {
+      res.status(401).type('html').send(renderLogin('Invalid username or password', inputValue(req.body as Record<string, unknown>, 'return_to')));
+      return;
+    }
+    const session = randomUUID();
+    sessions.add(session);
+    res.setHeader('Set-Cookie', `dummy_session=${session}; HttpOnly; SameSite=Lax; Path=/dummy`);
+    const requested = inputValue(req.body as Record<string, unknown>, 'return_to');
+    const returnTo = /^\/dummy\/vendor-registration\/[0-9a-f-]+\/page\/(?:1|3)$/.test(requested)
+      ? requested
+      : '/dummy/vendor-registration';
+    res.redirect(303, returnTo);
+  });
+
+  router.post('/vendor-registration/logout', (req, res) => {
+    const cookie = req.header('cookie') ?? '';
+    const session = cookie.match(/(?:^|;\s*)dummy_session=([^;]+)/)?.[1];
+    if (session) sessions.delete(session);
+    res.setHeader('Set-Cookie', 'dummy_session=; HttpOnly; SameSite=Lax; Path=/dummy; Max-Age=0');
+    res.redirect(303, '/dummy/vendor-registration');
+  });
+
+  router.get('/vendor-registration/quick', (req, res) => {
+    if (!isLoggedIn(req)) { res.redirect(303, '/dummy/vendor-registration'); return; }
+    res.type('html').send(renderQuickVendor());
+  });
+
+  router.post('/vendor-registration/quick', (req, res, next) => {
+    if (!isLoggedIn(req)) { res.redirect(303, '/dummy/vendor-registration'); return; }
+    void (async () => {
+      const form = await readMultipart(req);
+      const isUpload = (value: FormDataEntryValue | null): value is File => Boolean(value && typeof value === 'object' && 'name' in value && 'arrayBuffer' in value);
+      const text = (key: string): string => String(form.get(key) ?? '').trim();
+      const values = Object.fromEntries(['contact_email', 'entity_type', 'company_name', 'country'].map((key) => [key, text(key)]));
+      const fileKeys = ['cr_copy', 'vat_certificate', 'bank_iban', 'national_address'];
+      const files = fileKeys.map((key) => ({ key, file: form.get(key) })).filter(({ file }) => isUpload(file) && file.name);
+      const errors = Object.entries(values).filter(([, value]) => !value).map(([key]) => `${key.replace(/_/g, ' ')} is required`);
+      if (values.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.contact_email)) errors.push('contact email is not valid');
+      if (values.country && !COUNTRIES.includes(values.country)) errors.push('country is invalid');
+      if (values.entity_type && !ENTITY_TYPES.includes(values.entity_type)) errors.push('entity type is invalid');
+      for (const key of fileKeys) {
+        const upload = form.get(key);
+        if (!(isUpload(upload)) || !upload.name) errors.push(`${key.replace(/_/g, ' ')} PDF is required`);
+        else if (extensionOf(upload.name) !== 'pdf') errors.push(`${key.replace(/_/g, ' ')} must be a PDF`);
+      }
+      if (errors.length) { res.status(400).type('html').send(renderQuickVendor(errors, values)); return; }
+      const id = randomUUID();
+      const dir = join(submissionsRoot, 'quick', id);
+      await mkdir(dir, { recursive: true });
+      const stored = [];
+      for (const [index, key] of fileKeys.entries()) {
+        const upload = form.get(key) as File;
+        const [saved] = await storeFiles(dir, key, [upload], index);
+        stored.push({ key, file: saved });
+      }
+      const acknowledgement = `QUICK-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${id.slice(0, 8).toUpperCase()}`;
+      res.type('html').send(renderLayout('Registration submitted', 'success', '<aside class="aside"><div class="eyebrow">Complete</div><h2>Vendor intake received</h2><p class="muted">One-page registration submitted successfully.</p></aside>', `<section class="card ack"><div class="eyebrow">Acknowledgement</div><strong>${acknowledgement}</strong><p><b>${esc(values.company_name)}</b> has been registered.</p><p>${esc(values.country)} · ${esc(((values.entity_type ?? '') as string).replace(/_/g, ' '))} · ${esc(values.contact_email)}</p><h3>Uploaded documents</h3><ul>${stored.map(({ key, file }) => `<li>${esc(key.replace(/_/g, ' '))}: ${esc(file?.original_name ?? '')}</li>`).join('')}</ul><a href="/dummy/vendor-registration"><button type="button">Back to registration list</button></a></section>`));
+    })().catch(next);
   });
 
   router.post('/vendor-registration/start', (req, res, next) => {
+    if (!isLoggedIn(req)) { res.redirect(303, '/dummy/vendor-registration'); return; }
     void (async () => {
       const templateKey = inputValue(req.body as Record<string, unknown>, 'template');
       const state = applyTemplate(randomUUID(), templateKey);
@@ -930,6 +1081,11 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       }
       const state = await ensureDraft(req, res);
       if (!state) return;
+      if (!isLoggedIn(req) && (page === 1 || page === 3)) {
+        res.type('html').send(renderLogin('', `/dummy/vendor-registration/${state.id}/page/${page}`));
+        return;
+      }
+      if (!isLoggedIn(req)) { res.redirect(303, '/dummy/vendor-registration'); return; }
       if (page === 10 && !state.submitted_at) {
         res.redirect(303, `/dummy/vendor-registration/${state.id}/page/9`);
         return;
@@ -947,6 +1103,11 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       }
       const state = await ensureDraft(req, res);
       if (!state) return;
+      if (!isLoggedIn(req) && (page === 1 || page === 3)) {
+        res.type('html').send(renderLogin('', `/dummy/vendor-registration/${state.id}/page/${page}`));
+        return;
+      }
+      if (!isLoggedIn(req)) { res.redirect(303, '/dummy/vendor-registration'); return; }
       if ((req.body as Record<string, unknown>).nav === 'back') {
         res.redirect(303, `/dummy/vendor-registration/${state.id}/page/${Math.max(1, page - 1)}`);
         return;
@@ -1109,6 +1270,7 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
   });
 
   router.get('/receipt/:id', (req, res, next) => {
+    if (!isLoggedIn(req)) { res.redirect(303, '/dummy/vendor-registration'); return; }
     void (async () => {
       const receipt = await readReceipt(req.params.id as string);
       if (!receipt) {

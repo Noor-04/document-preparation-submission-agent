@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.example
+    volumes:
+      - app-data:/app/data
+
+volumes:
+  app-data:

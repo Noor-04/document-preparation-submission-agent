@@ -68,6 +68,14 @@ test('roles are enforced over HTTP', async () => {
     });
     assert.equal(selfApprove.status, 403);
     assert.equal(selfApprove.body.error, 'APPROVER_ROLE_REQUIRED');
+
+    const amend = { entity_name: 'Noor Logistics Holding B.V.' };
+    for (const token of [DEMO_TOKENS.approver, DEMO_TOKENS.submitter]) {
+      const refused = await call(`/api/registrations/${nl.id}`, token, 'PATCH', amend);
+      assert.equal(refused.status, 403);
+      assert.equal(refused.body.error, 'PREPARER_ROLE_REQUIRED');
+    }
+    assert.equal((await call(`/api/registrations/${nl.id}`, DEMO_TOKENS.preparer, 'PATCH', amend)).status, 200);
   });
 });
 

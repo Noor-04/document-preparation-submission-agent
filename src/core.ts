@@ -130,6 +130,9 @@ export function updateRegistration(
   id: string,
   patch: Partial<Pick<Registration, 'entity_name' | 'entity_id' | 'jurisdiction' | 'reg_type'>>,
 ): Registration {
+  if (actor.role !== 'preparer' && actor.role !== 'admin') {
+    throw new AppError(403, 'PREPARER_ROLE_REQUIRED', 'only a preparer may amend a registration');
+  }
   const before = getRegistration(db, id);
   const next = { ...before, ...patch, updated_at: nowIso() };
   db.prepare(
