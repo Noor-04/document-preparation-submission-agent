@@ -13,6 +13,8 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { Readable } from 'node:stream';
 
+export const MAX_FILE_BYTES = 2 * 1024 * 1024;
+export const MAX_TOTAL_BYTES = 12 * 1024 * 1024;
 export const MAX_SELECTED_DOCUMENTS = 16;
 export const ALLOWED_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'txt', 'docx'];
 
@@ -335,6 +337,8 @@ const CSS = `
 const wantsJson = (req: Request): boolean =>
   req.query.format === 'json' || (req.header('accept') ?? '').includes('application/json');
 
+class TooLarge extends Error {}
+
 function pageTitle(page: number): string {
   return WIZARD_PAGES[page - 1] ?? WIZARD_PAGES[0];
 }
@@ -404,6 +408,10 @@ function validateFile(field: string, file: File, errors: string[]): boolean {
     errors.push(`${field}: file is empty`);
     return false;
   }
+  if (file.size > MAX_FILE_BYTES) {
+    errors.push(`${field}: file is ${file.size} bytes, over the ${MAX_FILE_BYTES} byte limit`);
+    return false;
+  }
   return true;
 }
 
@@ -412,9 +420,31 @@ async function readMultipart(req: Request): Promise<FormData> {
   if (!contentType.toLowerCase().startsWith('multipart/form-data')) {
     throw new Error('expected a multipart/form-data body');
   }
-  return await new Response(Readable.toWeb(req) as ReadableStream, {
-    headers: { 'content-type': contentType },
-  }).formData();
+  if (Number(req.header('content-length') ?? 0) > MAX_TOTAL_BYTES) throw new TooLarge();
+
+  let over = false;
+  const capped = Readable.from(
+    (async function* () {
+      let seen = 0;
+      for await (const chunk of req) {
+        seen += (chunk as Buffer).length;
+        if (seen > MAX_TOTAL_BYTES) {
+          over = true;
+          return;
+        }
+        yield chunk;
+      }
+    })(),
+  );
+
+  try {
+    return await new Response(Readable.toWeb(capped) as ReadableStream, {
+      headers: { 'content-type': contentType },
+    }).formData();
+  } catch (err) {
+    if (over) throw new TooLarge();
+    throw err;
+  }
 }
 
 function inputValue(body: Record<string, unknown>, key: string): string {
@@ -650,7 +680,6 @@ function pageActions(state: WizardState, page: number, opts: { multipart?: boole
   return `${opts.extraLeft ?? ''}<div class="actions">
     <div class="left">
       ${page > 1 ? `<button class="secondary" type="submit" name="nav" value="back">Back</button>` : ''}
-      <button class="secondary" type="submit" formnovalidate formmethod="post" formaction="/dummy/vendor-registration/${esc(state.id)}/clear" onclick="return window.confirm('Clear all information entered in this draft? Uploaded files will be detached from the form.')">Clear all information</button>
     </div>
     <div class="right">
       <button type="submit"${page === 9 ? ' id="submit-final"' : ' id="next-page"'}>${esc(opts.submitLabel ?? (page === 9 ? 'Submit registration' : 'Save and continue'))}</button>
@@ -926,7 +955,13 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
   const readDraft = async (id: string): Promise<WizardState | undefined> => {
     if (!UUID.test(id)) return undefined;
     try {
-      return JSON.parse(await readFile(draftPath(id), 'utf8')) as WizardState;
+      const state = JSON.parse(await readFile(draftPath(id), 'utf8')) as WizardState;
+      if (id === SEDAR_DRAFT_ID) {
+        const preset = sedarDraft();
+        state.selected_documents = preset.selected_documents;
+        await saveDraft(state);
+      }
+      return state;
     } catch {
       if (id === SEDAR_DRAFT_ID) {
         const state = sedarDraft();
@@ -1033,18 +1068,6 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       const templateKey = inputValue(req.body as Record<string, unknown>, 'template');
       const state = applyTemplate(randomUUID(), templateKey);
       await saveDraft(state);
-      res.redirect(303, `/dummy/vendor-registration/${state.id}/page/1`);
-    })().catch(next);
-  });
-
-  router.post('/vendor-registration/:id/clear', (req, res, next) => {
-    if (!isLoggedIn(req)) { res.redirect(303, '/dummy/vendor-registration'); return; }
-    void (async () => {
-      const state = await ensureDraft(req, res);
-      if (!state) return;
-      const cleared = initialState(state.id);
-      cleared.portal_style = state.portal_style;
-      await saveDraft(cleared);
       res.redirect(303, `/dummy/vendor-registration/${state.id}/page/1`);
     })().catch(next);
   });
@@ -1193,8 +1216,11 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
         try {
           form = await readMultipart(req);
         } catch (err) {
-          const message = `could not parse the upload: ${(err as Error).message}`;
-          fail(req, res, 400, [message], state, page);
+          const tooLarge = err instanceof TooLarge;
+          const message = tooLarge
+            ? `submission exceeds the ${MAX_TOTAL_BYTES} byte limit`
+            : `could not parse the upload: ${(err as Error).message}`;
+          fail(req, res, tooLarge ? 413 : 400, [message], state, page);
           return;
         }
         const [batch1, batch2] = splitDocs(state.selected_documents);

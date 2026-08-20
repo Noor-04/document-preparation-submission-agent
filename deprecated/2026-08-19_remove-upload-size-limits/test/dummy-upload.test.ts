@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { createApp } from '../src/api.js';
-import { safeFilename } from '../src/dummy-upload.js';
+import { MAX_FILE_BYTES, safeFilename } from '../src/dummy-upload.js';
 import { ENV, testDb } from './support.js';
 
 interface Ctx {
@@ -411,7 +411,7 @@ test('page 6 bulk actions can select all and final submission refuses missing up
   });
 });
 
-test('multipart uploads accept files larger than the former per-file limit', async () => {
+test('multipart uploads still enforce total-size and per-file limits', async () => {
   await withPages(async ({ base, postForm, postMultipart }) => {
     const id = await startWizard(base);
 
@@ -437,10 +437,11 @@ test('multipart uploads accept files larger than the former per-file limit', asy
     await postForm(pagePath(id, 6), new URLSearchParams('selected_documents=trade_license'));
 
     const large = new FormData();
-    large.set('doc_file_trade_license', file('trade-license.pdf', (2 * 1024 * 1024) + 1));
+    large.set('doc_file_trade_license', file('trade-license.pdf', MAX_FILE_BYTES + 1));
     const bigRes = await postMultipart(pagePath(id, 7), large);
-    assert.equal(bigRes.status, 303);
-    assert.equal(bigRes.headers.get('location'), pagePath(id, 8));
+    assert.equal(bigRes.status, 400);
+    const bigHtml = await bigRes.text();
+    assert.match(bigHtml, /over the 2097152 byte limit/);
   });
 });
 

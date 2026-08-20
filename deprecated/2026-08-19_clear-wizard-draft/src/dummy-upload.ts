@@ -650,7 +650,6 @@ function pageActions(state: WizardState, page: number, opts: { multipart?: boole
   return `${opts.extraLeft ?? ''}<div class="actions">
     <div class="left">
       ${page > 1 ? `<button class="secondary" type="submit" name="nav" value="back">Back</button>` : ''}
-      <button class="secondary" type="submit" formnovalidate formmethod="post" formaction="/dummy/vendor-registration/${esc(state.id)}/clear" onclick="return window.confirm('Clear all information entered in this draft? Uploaded files will be detached from the form.')">Clear all information</button>
     </div>
     <div class="right">
       <button type="submit"${page === 9 ? ' id="submit-final"' : ' id="next-page"'}>${esc(opts.submitLabel ?? (page === 9 ? 'Submit registration' : 'Save and continue'))}</button>
@@ -926,7 +925,13 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
   const readDraft = async (id: string): Promise<WizardState | undefined> => {
     if (!UUID.test(id)) return undefined;
     try {
-      return JSON.parse(await readFile(draftPath(id), 'utf8')) as WizardState;
+      const state = JSON.parse(await readFile(draftPath(id), 'utf8')) as WizardState;
+      if (id === SEDAR_DRAFT_ID) {
+        const preset = sedarDraft();
+        state.selected_documents = preset.selected_documents;
+        await saveDraft(state);
+      }
+      return state;
     } catch {
       if (id === SEDAR_DRAFT_ID) {
         const state = sedarDraft();
@@ -1033,18 +1038,6 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       const templateKey = inputValue(req.body as Record<string, unknown>, 'template');
       const state = applyTemplate(randomUUID(), templateKey);
       await saveDraft(state);
-      res.redirect(303, `/dummy/vendor-registration/${state.id}/page/1`);
-    })().catch(next);
-  });
-
-  router.post('/vendor-registration/:id/clear', (req, res, next) => {
-    if (!isLoggedIn(req)) { res.redirect(303, '/dummy/vendor-registration'); return; }
-    void (async () => {
-      const state = await ensureDraft(req, res);
-      if (!state) return;
-      const cleared = initialState(state.id);
-      cleared.portal_style = state.portal_style;
-      await saveDraft(cleared);
       res.redirect(303, `/dummy/vendor-registration/${state.id}/page/1`);
     })().catch(next);
   });

@@ -1,0 +1,97 @@
+{
+  "id": "310d0528-da0e-4bb8-800b-84486e0dc7df",
+  "created_at": "2026-08-19T06:27:10.295Z",
+  "updated_at": "2026-08-19T12:17:00.344Z",
+  "portal_style": "supplier",
+  "company_name": "Sedar",
+  "trading_name": "Sedar BI Group Trading",
+  "country": "GB",
+  "entity_type": "sole_establishment",
+  "registration_number": "sa",
+  "tax_number": "ds",
+  "incorporation_date": "2015-06-01",
+  "website": "https://sedar.example",
+  "address_line": "Office 1203, Business Bay Tower, Dubai",
+  "city": "ds",
+  "region": "",
+  "postal_code": "",
+  "contact_name": "Rahul Menon",
+  "contact_title": "",
+  "contact_email": "ops@sedar.example",
+  "contact_phone": "+971 4 555 0199",
+  "contact_mobile": "+971 50 555 0123",
+  "employee_count": "48",
+  "annual_revenue_band": "",
+  "notes": "",
+  "services": [
+    "facilities"
+  ],
+  "selected_documents": [
+    "sedar_cr",
+    "sedar_vat",
+    "sedar_bank_iban",
+    "sedar_national_address"
+  ],
+  "documents": {
+    "sedar_cr": {
+      "number": "",
+      "issue_date": "",
+      "expiry_date": "",
+      "issuing_authority": "",
+      "notes": "",
+      "file": {
+        "field": "sedar_cr",
+        "original_name": "Trade-License.pdf",
+        "stored_as": "sedar_cr-4-Trade-License.pdf",
+        "size": 1040,
+        "content_type": "application/pdf"
+      }
+    },
+    "sedar_vat": {
+      "number": "",
+      "issue_date": "",
+      "expiry_date": "",
+      "issuing_authority": "",
+      "notes": "",
+      "file": {
+        "field": "sedar_vat",
+        "original_name": "VAT-Certificate.pdf",
+        "stored_as": "sedar_vat-5-VAT-Certificate.pdf",
+        "size": 1001,
+        "content_type": "application/pdf"
+      }
+    },
+    "sedar_bank_iban": {
+      "number": "",
+      "issue_date": "",
+      "expiry_date": "",
+      "issuing_authority": "",
+      "notes": "",
+      "file": {
+        "field": "sedar_bank_iban",
+        "original_name": "Vendor Registration Document from Sedar (3).pdf",
+        "stored_as": "sedar_bank_iban-4-Vendor_Registration_Document_from_Sedar__3_.pdf",
+        "size": 3505082,
+        "content_type": "application/pdf"
+      }
+    },
+    "sedar_national_address": {
+      "number": "",
+      "issue_date": "",
+      "expiry_date": "",
+      "issuing_authority": "",
+      "notes": "",
+      "file": {
+        "field": "sedar_national_address",
+        "original_name": "Vendor Registration Document from Sedar (3).pdf",
+        "stored_as": "sedar_national_address-5-Vendor_Registration_Document_from_Sedar__3_.pdf",
+        "size": 3505082,
+        "content_type": "application/pdf"
+      }
+    }
+  },
+  "declaration_name": "sas",
+  "declaration_role": "sa",
+  "declaration_confirmed": true,
+  "submitted_at": "2026-08-19T11:29:40.436Z"
+}
