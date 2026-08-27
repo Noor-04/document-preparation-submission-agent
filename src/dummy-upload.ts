@@ -160,6 +160,8 @@ const KSA_SAMA_FORM_FILE = 'vendor-registration-ksa-sama.html';
 const KSA_SAMA_FORM_PATH = '/dummy/vendor-registration/ksa-sama-al-thuraya';
 const PORTAL_FORM_FILE = 'vendor-registration-compliance-portal.html';
 const PORTAL_FORM_PATH = '/dummy/vendor-registration/supplier-compliance-portal';
+const PREQUAL_FORM_FILE = 'vendor-registration-prequalification.html';
+const PREQUAL_FORM_PATH = '/dummy/vendor-registration/supplier-prequalification-update';
 const publicFile = (name: string): string => {
   const cwdPublic = join(process.cwd(), 'public', name);
   return existsSync(cwdPublic)
@@ -172,6 +174,7 @@ const omanFormPath = publicFile(OMAN_FORM_FILE);
 const ksaDecorFormPath = publicFile(KSA_DECOR_FORM_FILE);
 const ksaSamaFormPath = publicFile(KSA_SAMA_FORM_FILE);
 const portalFormPath = publicFile(PORTAL_FORM_FILE);
+const prequalFormPath = publicFile(PREQUAL_FORM_FILE);
 
 export interface StoredFile {
   field: string;
@@ -589,7 +592,7 @@ function renderTemplatePicker(): string {
         <h2>Company presets</h2>
         <p>${esc(copy.pickerLead)}</p>
       </div>
-      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 9}</strong><small class="muted">10 pages each</small></div>
+      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 10}</strong><small class="muted">10 pages each</small></div>
     </aside>`,
     `<section class="card">
       <div class="hero">
@@ -647,6 +650,12 @@ function renderTemplatePicker(): string {
           <small>Single page · 6 steps · signature &amp; stamp · 8 required documents</small>
           <p class="muted">Split-screen wizard covering the registration emails: portal status dropdowns, Yes/No agreements, a drawn or typed signature, company stamp upload and a clarification box.</p>
           <a href="/dummy/vendor-registration/supplier-compliance-portal"><button type="button" style="margin-top:.8rem">Open compliance portal form</button></a>
+        </div>
+        <div class="doc-card" style="border-color:var(--accent)">
+          <strong>Supplier prequalification &amp; portal update</strong>
+          <small>Single page · scroll-spy sections · 6 required documents</small>
+          <p class="muted">One long page with a sticky section nav, toggle switches, a completion slider and a floating progress pill. Covers Ariba network IDs, workflow stage and portal deadlines.</p>
+          <a href="/dummy/vendor-registration/supplier-prequalification-update"><button type="button" style="margin-top:.8rem">Open prequalification form</button></a>
         </div>
         ${COMPANY_TEMPLATES.map((template) => `<form method="post" action="/dummy/vendor-registration/start" class="doc-card">
           <input type="hidden" name="template" value="${esc(template.key)}">
@@ -716,7 +725,7 @@ function renderLogin(error = '', returnTo = '/dummy/vendor-registration'): strin
 
 function safeLoginReturnTo(value: unknown): string {
   const requested = typeof value === 'string' ? value : '';
-  if (requested === UAE_FORM_PATH || requested === GLOBAL_FORM_PATH || requested === OMAN_FORM_PATH || requested === KSA_DECOR_FORM_PATH || requested === KSA_SAMA_FORM_PATH || requested === PORTAL_FORM_PATH) return requested;
+  if (requested === UAE_FORM_PATH || requested === GLOBAL_FORM_PATH || requested === OMAN_FORM_PATH || requested === KSA_DECOR_FORM_PATH || requested === KSA_SAMA_FORM_PATH || requested === PORTAL_FORM_PATH || requested === PREQUAL_FORM_PATH) return requested;
   return /^\/dummy\/vendor-registration\/[0-9a-f-]+\/page\/(?:1|3)$/.test(requested)
     ? requested
     : '/dummy/vendor-registration';
@@ -1279,6 +1288,25 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
     if (session) sessions.delete(session);
     res.setHeader('Set-Cookie', 'dummy_session=; HttpOnly; SameSite=Lax; Path=/dummy; Max-Age=0');
     res.redirect(303, '/dummy/vendor-registration');
+  });
+
+  router.get('/vendor-registration/supplier-prequalification-update', (req, res, next) => {
+    if (!isLoggedIn(req)) {
+      res.type('html').send(renderLogin('', PREQUAL_FORM_PATH));
+      return;
+    }
+    readFile(prequalFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+  });
+
+  router.post('/vendor-registration/supplier-prequalification-update', (_req, res) => {
+    res.type('html').send(renderLayout(
+      'Update received',
+      'form',
+      '<aside class="aside"></aside>',
+      `<section class="card"><h2>Update received</h2>
+        <p class="muted">Supplier prequalification &amp; portal update. Nothing left this machine &mdash; the dummy portal accepted the post and discarded it.</p>
+        <p><a href="/dummy/vendor-registration">Back to the flow picker</a></p></section>`,
+    ));
   });
 
   router.get('/vendor-registration/supplier-compliance-portal', (req, res, next) => {
