@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Supplier Compliance &amp; Portal Registration</title>
+<style>
+  :root{
+    --plum-1:#3b1361; --plum-2:#6d28d9; --plum-3:#a855f7;
+    --page:#f7f6fb; --card:#fff; --ink:#1a1626; --muted:#6b6480; --line:#e5e1ef;
+    --amber:#d97706; --ok:#0f9d6b; --ok-soft:#e6f7f1; --no:#b4443c;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans);line-height:1.55}
+
+  .split{display:grid;grid-template-columns:340px minmax(0,1fr);min-height:100vh}
+  @media(max-width:900px){.split{grid-template-columns:1fr}}
+
+  /* ---- left context panel ---- */
+  .ctx{background:linear-gradient(160deg,var(--plum-1) 0%,var(--plum-2) 62%,var(--plum-3) 130%);
+       color:#fff;padding:2.25rem 1.75rem;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+  @media(max-width:900px){.ctx{position:static;height:auto;padding:1.5rem}}
+  .ctx .eyebrow{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;opacity:.72}
+  .ctx h1{font-size:1.42rem;line-height:1.25;margin:.5rem 0 .5rem;font-weight:650}
+  .ctx .blurb{font-size:.86rem;opacity:.78;margin:0 0 1.9rem}
+  .flow{list-style:none;margin:0;padding:0;flex:1}
+  .flow li{display:flex;gap:.85rem;padding:.42rem 0;position:relative;opacity:.6;transition:.2s}
+  .flow li:not(:last-child)::before{content:"";position:absolute;left:13px;top:2rem;bottom:-.3rem;
+       width:1.5px;background:rgba(255,255,255,.24)}
+  .flow .n{flex:none;width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(255,255,255,.4);
+       display:grid;place-items:center;font-size:.76rem;font-weight:700;font-variant-numeric:tabular-nums;
+       background:rgba(255,255,255,.06);z-index:1}
+  .flow .tx{font-size:.87rem;padding-top:.18rem}
+  .flow .tx small{display:block;font-size:.73rem;opacity:.72}
+  .flow li[data-state=now]{opacity:1}
+  .flow li[data-state=now] .n{background:#fff;color:var(--plum-2);border-color:#fff}
+  .flow li[data-state=done]{opacity:.92;cursor:pointer}
+  .flow li[data-state=done] .n{background:rgba(255,255,255,.9);color:var(--plum-1);border-color:transparent}
+  .flow li[data-state=done] .n::after{content:"✓"}
+  .flow li[data-state=done] .n i{display:none}
+  .ctxfoot{border-top:1px solid rgba(255,255,255,.18);padding-top:1rem;font-size:.78rem;opacity:.8}
+  .ctxfoot .pct{height:5px;background:rgba(255,255,255,.2);border-radius:99px;overflow:hidden;margin-top:.5rem}
+  .ctxfoot .pct i{display:block;height:100%;width:14%;background:#fff;transition:width .3s}
+
+  /* ---- right form area ---- */
+  .main{padding:2.5rem 2.25rem 3rem;max-width:820px}
+  @media(max-width:620px){.main{padding:1.5rem 1.1rem 2.5rem}}
+  .stephead{margin-bottom:1.6rem}
+  .stephead .of{font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--plum-2);font-weight:700}
+  .stephead h2{font-size:1.5rem;margin:.3rem 0 .25rem;font-weight:650;letter-spacing:-.01em}
+  .stephead p{margin:0;color:var(--muted);font-size:.9rem}
+  .step[hidden]{display:none}
+
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.15rem 1.3rem}
+  @media(max-width:620px){.grid{grid-template-columns:1fr}}
+  .f{display:flex;flex-direction:column;gap:.3rem}
+  .f.full{grid-column:1/-1}
+  .f label{font-size:.83rem;font-weight:600}
+  .f label .req{color:var(--amber)}
+  .f input[type=text],.f input[type=tel],.f input[type=email],.f input[type=date],.f select,.f textarea{
+      font:inherit;font-size:.92rem;padding:.6rem .75rem;border-radius:10px;border:1px solid var(--line);
+      background:var(--card);color:var(--ink);width:100%;transition:.15s}
+  .f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--plum-3);
+      box-shadow:0 0 0 3px rgba(168,85,247,.16)}
+  .f textarea{resize:vertical;min-height:96px}
+  .f .err{color:var(--no);font-size:.76rem;min-height:.9rem}
+  .f .tip{color:var(--muted);font-size:.75rem}
+
+  /* yes / no segmented control */
+  .yn{display:flex;flex-direction:column;gap:.4rem;padding:.85rem 1rem;border:1px solid var(--line);
+      border-radius:12px;background:var(--card)}
+  .yn .q{font-size:.87rem;font-weight:600}
+  .yn .opts{display:flex;gap:.4rem}
+  .yn label{position:relative;flex:1}
+  .yn input{position:absolute;opacity:0;width:0;height:0}
+  .yn .opts span{display:block;text-align:center;padding:.4rem;border-radius:8px;border:1px solid var(--line);
+      font-size:.84rem;font-weight:600;color:var(--muted);cursor:pointer;background:#fbfaff;
+      transition:border-color .15s}
+  .yn .q .req{color:var(--amber)}
+  .yn .opts label:hover span{border-color:#cfc6e6}
+  .yn .opts input:checked + span{border-color:transparent;color:#fff}
+  .yn .opts label.y input:checked + span{background:var(--ok)}
+  .yn .opts label.n input:checked + span{background:var(--no)}
+  .yn .opts input:focus-visible + span{outline:2px solid var(--plum-3);outline-offset:2px}
+
+  /* attachments */
+  .doc{display:flex;align-items:center;gap:.9rem;padding:.75rem .9rem;border:1px solid var(--line);
+       border-radius:11px;background:var(--card);margin-bottom:.6rem;transition:.15s}
+  .doc .ic{flex:none;width:28px;height:28px;border-radius:8px;background:#f2ecff;color:var(--plum-2);
+       display:grid;place-items:center;font-size:.62rem;font-weight:800}
+  .doc .m{flex:1;min-width:0}
+  .doc .m b{display:block;font-size:.86rem;font-weight:600}
+  .doc .m code{font-size:.73rem;color:var(--muted);font-family:var(--mono)}
+  .doc input[type=file]{max-width:195px;font-size:.77rem;color:var(--muted)}
+  .doc[data-filled=yes]{border-color:var(--ok);background:var(--ok-soft)}
+  .doc[data-filled=yes] .ic{background:var(--ok);color:#fff}
+
+  /* signature */
+  .sig{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:.9rem}
+  .sig canvas{width:100%;height:150px;border:1px dashed var(--line);border-radius:9px;
+      background:repeating-linear-gradient(45deg,#fdfcff,#fdfcff 10px,#faf8ff 10px,#faf8ff 20px);
+      touch-action:none;cursor:crosshair;display:block}
+  .sig .row{display:flex;gap:.6rem;align-items:center;margin-top:.6rem;flex-wrap:wrap}
+  .sig .row input{flex:1;min-width:170px}
+  .sig .mini{all:unset;cursor:pointer;font-size:.79rem;color:var(--plum-2);font-weight:600;
+      border:1px solid var(--line);padding:.35rem .7rem;border-radius:8px}
+  .sig .mini:hover{border-color:var(--plum-3)}
+  .sig .state{font-size:.76rem;color:var(--muted)}
+  .sig[data-signed=yes] .state{color:var(--ok);font-weight:600}
+
+  /* review */
+  .rev{border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
+  .rev .grp{padding:.55rem .95rem;background:#faf8ff;font-size:.72rem;letter-spacing:.09em;
+      text-transform:uppercase;color:var(--plum-2);font-weight:700;border-top:1px solid var(--line)}
+  .rev .grp:first-child{border-top:0}
+  .rev .r{display:flex;justify-content:space-between;gap:1rem;padding:.45rem .95rem;font-size:.85rem;
+      border-top:1px solid #f2eff8}
+  .rev .r span:first-child{color:var(--muted)}
+  .rev .r span:last-child{font-weight:600;text-align:right;word-break:break-word}
+  .rev .r.miss span:last-child{font-weight:400;color:var(--amber)}
+
+  .nav{display:flex;gap:.75rem;margin-top:2rem;padding-top:1.3rem;border-top:1px solid var(--line)}
+  .btn{all:unset;cursor:pointer;padding:.65rem 1.4rem;border-radius:10px;font-size:.9rem;font-weight:650;transition:.15s}
+  .btn.go{background:var(--plum-2);color:#fff}
+  .btn.go:hover{background:#5b21b6}
+  .btn.back{border:1px solid var(--line);color:var(--muted)}
+  .btn.back:hover{color:var(--ink);border-color:#cfc6e6}
+  .btn[hidden]{display:none}
+  .spacer{flex:1}
+</style>
+</head>
+<body>
+<div class="split">
+  <aside class="ctx">
+    <div class="eyebrow">Supplier onboarding</div>
+    <h1>Compliance &amp; Portal Registration</h1>
+    <p class="blurb">Everything the registration emails asked for, in six steps.</p>
+    <ul class="flow" id="flow"></ul>
+    <div class="ctxfoot">
+      <span id="ctxPct">Step 1 of 6</span>
+      <div class="pct"><i id="ctxBar"></i></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <form id="form" method="post" action="/dummy/vendor-registration/supplier-compliance-portal" enctype="multipart/form-data" novalidate>
+
+      <section class="step" data-step="1">
+        <div class="stephead"><div class="of">Step 1</div><h2>Company Identity</h2>
+          <p>Legal identifiers exactly as they appear on the commercial record.</p></div>
+        <div class="grid">
+          <div class="f full"><label for="c_name">Supplier’s Registered Corporate Name <span class="req">*</span></label>
+            <input type="text" id="c_name" name="suppliers_registered_corporate_name" required autocomplete="organization" />
+            <span class="err" data-for="c_name"></span></div>
+          <div class="f"><label for="c_cr">Commercial Record Identifier <span class="req">*</span></label>
+            <input type="text" id="c_cr" name="commercial_record_identifier" required />
+            <span class="err" data-for="c_cr"></span></div>
+          <div class="f"><label for="c_tax">Tax Enrolment Reference <span class="req">*</span></label>
+            <input type="text" id="c_tax" name="tax_enrolment_reference" required />
+            <span class="err" data-for="c_tax"></span></div>
+        </div>
+      </section>
+
+      <section class="step" data-step="2" hidden>
+        <div class="stephead"><div class="of">Step 2</div><h2>Contacts &amp; Signatory</h2>
+          <p>Who we correspond with, and who is authorised to sign.</p></div>
+        <div class="grid">
+          <div class="f"><label for="c_liaison">Main Business Liaison <span class="req">*</span></label>
+            <input type="text" id="c_liaison" name="main_business_liaison" required />
+            <span class="err" data-for="c_liaison"></span></div>
+          <div class="f"><label for="c_tel">Liaison’s Direct Telephone</label>
+            <input type="tel" id="c_tel" name="liaisons_direct_telephone" placeholder="+966 5X XXX XXXX" /></div>
+          <div class="f"><label for="c_altmail">Alternative Correspondence Email</label>
+            <input type="email" id="c_altmail" name="alternative_correspondence_email" /></div>
+          <div class="f"><label for="c_rep">Authorized Representative <span class="req">*</span></label>
+            <input type="text" id="c_rep" name="authorized_representative" required />
+            <span class="err" data-for="c_rep"></span></div>
+          <div class="f"><label for="c_cap">Representative’s Official Capacity</label>
+            <input type="text" id="c_cap" name="representatives_official_capacity" placeholder="ex: General Manager" /></div>
+          <div class="f"><label for="c_sigmail">Approved Signatory Email</label>
+            <input type="email" id="c_sigmail" name="approved_signatory_email" /></div>
+          <div class="f full"><label for="c_portalmail">Portal Login Email <span class="req">*</span></label>
+            <input type="email" id="c_portalmail" name="portal_login_email" required />
+            <span class="tip">The address the supplier portal account is registered against.</span>
+            <span class="err" data-for="c_portalmail"></span></div>
+        </div>
+      </section>
+
+      <section class="step" data-step="3" hidden>
+        <div class="stephead"><div class="of">Step 3</div><h2>Portal Registration Status</h2>
+          <p>Where this supplier currently stands in the buyer's portal.</p></div>
+        <div class="grid">
+          <div class="f"><label for="c_regref">Supplier Registration Reference</label>
+            <input type="text" id="c_regref" name="supplier_registration_reference" /></div>
+          <div class="f"><label for="c_vendorno">Existing Vendor Account Number</label>
+            <input type="text" id="c_vendorno" name="existing_vendor_account_number" /></div>
+          <div class="f"><label for="c_progress">Registration Progress Status <span class="req">*</span></label>
+            <select id="c_progress" name="registration_progress_status" required>
+              <option value="">Select status…</option>
+              <option>Not started</option><option>Invitation received</option><option>In progress</option>
+              <option>Submitted — awaiting review</option><option>Approved</option><option>Rejected</option>
+            </select>
+            <span class="err" data-for="c_progress"></span></div>
+          <div class="f"><label for="c_quest">Qualification Questionnaire Status <span class="req">*</span></label>
+            <select id="c_quest" name="qualification_questionnaire_status" required>
+              <option value="">Select status…</option>
+              <option>Not issued</option><option>Issued — not started</option><option>Partially completed</option>
+              <option>Completed</option><option>Requires clarification</option>
+            </select>
+            <span class="err" data-for="c_quest"></span></div>
+          <div class="f full"><label for="c_confno">Submission Confirmation Number</label>
+            <input type="text" id="c_confno" name="submission_confirmation_number" />
+            <span class="tip">Issued by the portal once the registration was submitted.</span></div>
+        </div>
+      </section>
+
+      <section class="step" data-step="4" hidden>
+        <div class="stephead"><div class="of">Step 4</div><h2>Agreements &amp; Availability</h2>
+          <p>Confirm what has been accepted and which supporting documents exist.</p></div>
+        <div class="grid" id="yns"></div>
+      </section>
+
+      <section class="step" data-step="5" hidden>
+        <div class="stephead"><div class="of">Step 5</div><h2>Registration Attachments</h2>
+          <p>Eight documents requested by the registration emails.</p></div>
+        <div id="docs"></div>
+      </section>
+
+      <section class="step" data-step="6" hidden>
+        <div class="stephead"><div class="of">Step 6</div><h2>Signature, Seal &amp; Review</h2>
+          <p>Sign, apply the company stamp, then check the summary before submitting.</p></div>
+        <div class="grid">
+          <div class="f"><label for="c_sigdate">Authorized Signature Date <span class="req">*</span></label>
+            <input type="date" id="c_sigdate" name="authorized_signature_date" required />
+            <span class="err" data-for="c_sigdate"></span></div>
+          <div class="f" id="sealHolder"></div>
+
+          <div class="f full"><label for="sigName">Authorised signature <span class="req">*</span></label>
+            <div class="sig" id="sig" data-signed="no">
+              <canvas id="sigPad" width="900" height="150" aria-label="Signature drawing area"></canvas>
+              <input type="hidden" id="sigData" name="signature_image" />
+              <div class="row">
+                <input type="text" id="sigName" name="signature_typed_name" placeholder="…or type the signatory's full name" />
+                <button type="button" class="mini" id="sigClear">Clear</button>
+                <span class="state" id="sigState">Not signed</span>
+              </div>
+            </div>
+            <span class="err" data-for="sigName"></span>
+          </div>
+
+          <div class="f full"><label for="c_stamp">Company stamp image</label>
+            <input type="file" id="c_stamp" name="company_stamp_image" accept="image/png,image/jpeg,.png,.jpg,.jpeg" />
+            <span class="tip">PNG or JPEG of the official seal.</span></div>
+
+          <div class="f full"><label for="c_comments">Comments / clarification</label>
+            <textarea id="c_comments" name="comments_clarification" placeholder="Anything the reviewer should know."></textarea></div>
+        </div>
+
+        <h3 style="font-size:.95rem;margin:1.8rem 0 .7rem">Summary</h3>
+        <div class="rev" id="rev"></div>
+      </section>
+
+      <div class="nav">
+        <button type="button" class="btn back" id="back" hidden>← Back</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn go" id="next">Continue →</button>
+        <button type="submit" class="btn go" id="submit" hidden>Submit registration</button>
+      </div>
+    </form>
+  </main>
+</div>
+
+<script>
+(function () {
+  var YN = [
+    { n:'confidentiality_agreement_accepted',        q:'Confidentiality Agreement Accepted',        req:true },
+    { n:'supplier_ethics_rules_acknowledged',        q:'Supplier Ethics Rules Acknowledged',        req:true },
+    { n:'bank_letter_confirmation_available',        q:'Bank Letter Confirmation Available',        req:false },
+    { n:'company_letterhead_bank_details_available', q:'Company-Letterhead Bank Details Available', req:false },
+    { n:'arabic_corporate_profile_available',        q:'Arabic Corporate Profile Available',        req:false }
+  ];
+  var SEAL = { n:'official_company_seal_applied', q:'Official Company Seal Applied', req:false };
+
+  var DOCS = [
+    { n:'signed_vendor_registration_form', l:'Signed Vendor Registration Form' },
+    { n:'vendor_master_template',          l:'Vendor Master Template' },
+    { n:'non_disclosure_agreement',        l:'Non-Disclosure Agreement' },
+    { n:'supplier_code_of_conduct',        l:'Supplier Code of Conduct' },
+    { n:'authorized_signatures_form',      l:'Authorized Signatures Form' },
+    { n:'contact_information_form',        l:'Contact Information Form' },
+    { n:'bank_iban_certificate',           l:'Bank IBAN Certificate' },
+    { n:'arabic_company_profile',          l:'Arabic Company Profile' }
+  ];
+
+  var STEPS = [
+    { t:'Company identity', s:'Legal identifiers' },
+    { t:'Contacts',         s:'Liaison & signatory' },
+    { t:'Portal status',    s:'Registration progress' },
+    { t:'Agreements',       s:'Acceptance & availability' },
+    { t:'Attachments',      s:'8 documents' },
+    { t:'Sign & review',    s:'Seal, stamp, submit' }
+  ];
+
+  function ynMarkup(d) {
+    return '<div class="yn" data-yn="' + d.n + '"><div class="q">' + d.q +
+      (d.req ? ' <span class="req">*</span>' : '') + '</div><div class="opts">' +
+      '<label class="y"><input type="radio" name="' + d.n + '" value="Yes"' + (d.req ? ' required' : '') +
+      ' id="' + d.n + '_yes" /><span>Yes</span></label>' +
+      '<label class="n"><input type="radio" name="' + d.n + '" value="No" id="' + d.n + '_no" /><span>No</span></label>' +
+      '</div><span class="err" data-for="' + d.n + '_yes"></span></div>';
+  }
+
+  var yns = document.getElementById('yns');
+  YN.forEach(function (d) {
+    var w = document.createElement('div');
+    w.className = 'f' + (YN.indexOf(d) === YN.length - 1 ? ' full' : '');
+    w.innerHTML = ynMarkup(d);
+    yns.appendChild(w);
+  });
+  document.getElementById('sealHolder').innerHTML = ynMarkup(SEAL);
+
+  var docs = document.getElementById('docs');
+  DOCS.forEach(function (d, i) {
+    var row = document.createElement('div');
+    row.className = 'doc'; row.setAttribute('data-filled', 'no');
+    row.innerHTML = '<span class="ic">PDF</span><div class="m"><b>' + d.l + '</b><code>' + d.l + '.pdf</code></div>' +
+      '<input type="file" accept="application/pdf,.pdf" id="doc_' + i + '" name="' + d.n +
+      '" data-expected-filename="' + d.l + '.pdf" aria-label="' + d.l + '" />';
+    docs.appendChild(row);
+    row.querySelector('input').addEventListener('change', function (e) {
+      row.setAttribute('data-filled', e.target.files.length ? 'yes' : 'no');
+    });
+  });
+
+  /* ---------- signature pad ---------- */
+  var pad = document.getElementById('sigPad'), ctx = pad.getContext('2d');
+  var sig = document.getElementById('sig'), sigData = document.getElementById('sigData');
+  var sigState = document.getElementById('sigState'), sigName = document.getElementById('sigName');
+  var drawing = false, inked = false;
+  ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.strokeStyle = '#1a1626';
+  function pos(e) {
+    var r = pad.getBoundingClientRect();
+    var x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    var y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+    return { x: x * (pad.width / r.width), y: y * (pad.height / r.height) };
+  }
+  function start(e) { drawing = true; var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+  function move(e) { if (!drawing) return; var p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); inked = true; e.preventDefault(); }
+  function end() { if (!drawing) return; drawing = false; sync(); }
+  pad.addEventListener('mousedown', start); pad.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  pad.addEventListener('touchstart', start); pad.addEventListener('touchmove', move); pad.addEventListener('touchend', end);
+
+  function sync() {
+    var typed = sigName.value.trim();
+    var signed = inked || typed !== '';
+    sig.setAttribute('data-signed', signed ? 'yes' : 'no');
+    sigState.textContent = inked ? 'Signed (drawn)' : (typed ? 'Signed (typed): ' + typed : 'Not signed');
+    sigData.value = inked ? pad.toDataURL('image/png') : (typed ? 'typed:' + typed : '');
+  }
+  sigName.addEventListener('input', sync);
+  document.getElementById('sigClear').addEventListener('click', function () {
+    ctx.clearRect(0, 0, pad.width, pad.height); inked = false; sigName.value = ''; sync();
+  });
+
+  /* ---------- steps ---------- */
+  var steps = [].slice.call(document.querySelectorAll('.step'));
+  var flow = document.getElementById('flow');
+  var back = document.getElementById('back'), next = document.getElementById('next'), submit = document.getElementById('submit');
+  var cur = 0;
+
+  STEPS.forEach(function (s, i) {
+    var li = document.createElement('li');
+    li.innerHTML = '<span class="n"><i>' + (i + 1) + '</i></span><span class="tx">' + s.t + '<small>' + s.s + '</small></span>';
+    li.addEventListener('click', function () { if (i < cur) show(i); });
+    flow.appendChild(li);
+  });
+
+  function show(i) {
+    cur = i;
+    steps.forEach(function (s, n) { s.hidden = n !== i; });
+    [].slice.call(flow.children).forEach(function (li, n) {
+      li.setAttribute('data-state', n === i ? 'now' : (n < i ? 'done' : 'todo'));
+    });
+    document.getElementById('ctxPct').textContent = 'Step ' + (i + 1) + ' of ' + steps.length;
+    document.getElementById('ctxBar').style.width = ((i + 1) / steps.length * 100) + '%';
+    back.hidden = i === 0;
+    next.hidden = i === steps.length - 1;
+    submit.hidden = i !== steps.length - 1;
+    if (i === steps.length - 1) review();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function validate(i) {
+    var ok = true, seen = {};
+    steps[i].querySelectorAll('[required]').forEach(function (el) {
+      if (el.type === 'radio') {
+        if (seen[el.name]) return;
+        seen[el.name] = 1;
+        var picked = steps[i].querySelector('input[name="' + el.name + '"]:checked');
+        var slot = steps[i].querySelector('.err[data-for="' + el.name + '_yes"]');
+        if (slot) slot.textContent = picked ? '' : 'Choose Yes or No.';
+        if (!picked && ok) { el.focus(); ok = false; }
+        return;
+      }
+      var s2 = steps[i].querySelector('.err[data-for="' + el.id + '"]');
+      var bad = !el.value.trim();
+      if (s2) s2.textContent = bad ? 'Required.' : '';
+      if (bad && ok) { el.focus(); ok = false; }
+    });
+    // signature is required on the last step
+    if (i === steps.length - 1 && sig.getAttribute('data-signed') !== 'yes') {
+      var ss = steps[i].querySelector('.err[data-for="sigName"]');
+      if (ss) ss.textContent = 'Draw a signature or type the signatory name.';
+      if (ok) { sigName.focus(); ok = false; }
+    }
+    return ok;
+  }
+
+  function esc(v) { return String(v).replace(/[<>&]/g, ''); }
+
+  function review() {
+    var box = document.getElementById('rev');
+    box.innerHTML = '';
+    STEPS.slice(0, 5).forEach(function (s, si) {
+      var sec = steps[si];
+      var rows = '';
+      sec.querySelectorAll('input:not([type=file]):not([type=radio]):not([type=hidden]), select, textarea').forEach(function (el) {
+        var lab = sec.querySelector('label[for="' + el.id + '"]');
+        if (!lab) return;
+        var v = el.value.trim();
+        rows += '<div class="r' + (v ? '' : ' miss') + '"><span>' + lab.textContent.replace('*', '').trim() +
+                '</span><span>' + (v ? esc(v) : 'not provided') + '</span></div>';
+      });
+      sec.querySelectorAll('.yn').forEach(function (b) {
+        var name = b.getAttribute('data-yn');
+        var picked = b.querySelector('input:checked');
+        rows += '<div class="r' + (picked ? '' : ' miss') + '"><span>' + b.querySelector('.q').textContent.replace('*', '').trim() +
+                '</span><span>' + (picked ? picked.value : 'not answered') + '</span></div>';
+      });
+      sec.querySelectorAll('input[type=file]').forEach(function (f) {
+        var lab = f.getAttribute('aria-label') || f.id;
+        rows += '<div class="r' + (f.files.length ? '' : ' miss') + '"><span>' + lab +
+                '</span><span>' + (f.files.length ? esc(f.files[0].name) : 'not attached') + '</span></div>';
+      });
+      if (rows) box.innerHTML += '<div class="grp">' + s.t + '</div>' + rows;
+    });
+  }
+
+  next.addEventListener('click', function () { if (validate(cur)) show(cur + 1); });
+  back.addEventListener('click', function () { show(cur - 1); });
+  document.getElementById('form').addEventListener('submit', function (e) {
+    if (!validate(steps.length - 1)) e.preventDefault();
+  });
+
+  show(0);
+})();
+</script>
+</body>
+</html>
