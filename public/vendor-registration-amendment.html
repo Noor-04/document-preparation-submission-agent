@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Supplier Record Amendment &amp; Document Renewal</title>
+<style>
+  :root{
+    --paper:#fbf9f4; --card:#fff; --ink:#141b2d; --body:#414b60; --soft:#7b8598;
+    --rule:#e4dfd4; --rule-2:#d3ccbd;
+    --old:#be123c; --old-bg:#fff1f3; --old-line:#fbcfd8;
+    --new:#047857; --new-bg:#ecfdf5; --new-line:#a7f3d0;
+    --brand:#1e3a5f; --brand-2:#2f5d92; --gold:#a16207;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.55}
+
+  .sheet{max-width:1020px;margin:0 auto;padding:2rem 1.5rem 4rem}
+
+  /* letterhead */
+  .letterhead{display:flex;justify-content:space-between;align-items:flex-end;gap:1.5rem;flex-wrap:wrap;
+      padding-bottom:1rem;border-bottom:2.5px solid var(--brand)}
+  .letterhead .ttl .ref{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+  .letterhead h1{font-size:1.6rem;margin:.3rem 0 .2rem;font-weight:700;letter-spacing:-.02em;color:var(--brand)}
+  .letterhead p{margin:0;color:var(--soft);font-size:.86rem}
+  .stamp{border:2px solid var(--rule-2);border-radius:8px;padding:.45rem .8rem;text-align:center;
+      transform:rotate(-3deg);flex:none}
+  .stamp b{display:block;font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;color:var(--soft)}
+  .stamp span{font-family:var(--mono);font-size:1rem;font-weight:800;color:var(--brand)}
+
+  /* chevron breadcrumb stepper */
+  .chevrons{display:flex;margin:1.5rem 0 2rem;overflow-x:auto;scrollbar-width:none}
+  .chevrons::-webkit-scrollbar{display:none}
+  .chevrons div{flex:1;min-width:120px;background:var(--card);border:1px solid var(--rule);
+      border-right:0;padding:.62rem .7rem .62rem 1.5rem;font-size:.79rem;color:var(--soft);
+      clip-path:polygon(0 0,calc(100% - 13px) 0,100% 50%,calc(100% - 13px) 100%,0 100%);
+      margin-right:-11px;white-space:nowrap}
+  .chevrons div:first-child{padding-left:.9rem;clip-path:polygon(0 0,calc(100% - 13px) 0,100% 50%,calc(100% - 13px) 100%,0 100%)}
+  .chevrons div:last-child{margin-right:0;border-right:1px solid var(--rule);
+      clip-path:polygon(0 0,100% 0,100% 100%,0 100%,13px 50%)}
+  .chevrons div b{font-family:var(--mono);font-size:.72rem;margin-right:.35rem}
+  .chevrons div[data-state=done]{background:#eef3f9;color:var(--brand-2)}
+  .chevrons div[data-state=now]{background:var(--brand);color:#fff;border-color:var(--brand)}
+
+  /* slide frame: numeral gutter + card */
+  .frame{display:grid;grid-template-columns:74px minmax(0,1fr);gap:1.1rem;align-items:start}
+  @media(max-width:700px){.frame{grid-template-columns:1fr}.gutter{display:none}}
+  .gutter{font-family:var(--mono);font-size:3.2rem;line-height:.9;font-weight:800;color:transparent;
+      -webkit-text-stroke:1.5px var(--rule-2);text-align:right;padding-top:.35rem;user-select:none}
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:1.75rem 1.9rem;
+      box-shadow:0 1px 0 var(--rule),0 14px 34px -22px rgba(20,27,45,.35)}
+  @media(max-width:560px){.card{padding:1.25rem}}
+  .slide[hidden]{display:none}
+  .slide .inner{animation:nudge .3s cubic-bezier(.2,.7,.3,1)}
+  @keyframes nudge{from{transform:translateY(8px)}to{transform:none}}
+  @media(prefers-reduced-motion:reduce){.slide .inner{animation:none}}
+  .card h2{font-size:1.24rem;margin:0 0 .2rem;font-weight:700;letter-spacing:-.012em;color:var(--brand)}
+  .card .lede{margin:0 0 1.5rem;color:var(--soft);font-size:.86rem}
+
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.1rem 1.3rem}
+  @media(max-width:620px){.grid{grid-template-columns:1fr}}
+  .f{display:flex;flex-direction:column;gap:.3rem}
+  .f.full{grid-column:1/-1}
+  .f label{font-size:.79rem;font-weight:650;color:var(--body)}
+  .f label .req{color:var(--old)}
+  .f input,.f select,.f textarea{font:inherit;font-size:.9rem;padding:.55rem .7rem;border:1px solid var(--rule-2);
+      border-radius:3px;background:#fffdf9;color:var(--ink);width:100%}
+  .f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--brand-2);
+      box-shadow:0 0 0 3px rgba(47,93,146,.13);background:#fff}
+  .f input.mono{font-family:var(--mono);font-size:.86rem}
+  .f textarea{resize:vertical;min-height:100px}
+  .f .tip{font-size:.74rem;color:var(--soft)}
+  .f .err{color:var(--old);font-size:.75rem;min-height:.9rem}
+
+  /* superseded -> revised comparison */
+  .compare{display:grid;grid-template-columns:1fr 44px 1fr;gap:0;align-items:stretch}
+  @media(max-width:700px){.compare{grid-template-columns:1fr;gap:.9rem}.compare .arrow{transform:rotate(90deg);height:34px}}
+  .col{border:1px solid;border-radius:5px;padding:1rem 1.05rem}
+  .col.old{border-color:var(--old-line);background:var(--old-bg)}
+  .col.new{border-color:var(--new-line);background:var(--new-bg)}
+  .col .cap{display:flex;align-items:center;gap:.45rem;font-size:.7rem;letter-spacing:.11em;text-transform:uppercase;
+      font-weight:800;margin-bottom:.9rem}
+  .col.old .cap{color:var(--old)}
+  .col.new .cap{color:var(--new)}
+  .col .cap .pin{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .col .f + .f{margin-top:.85rem}
+  .col .f input{background:#fff}
+  .arrow{display:grid;place-items:center;color:var(--soft);font-size:1.3rem}
+
+  /* yes / no */
+  .yn{border:1px solid var(--rule);border-radius:5px;background:#fffdf9;padding:.85rem 1rem}
+  .yn .q{font-size:.85rem;font-weight:650;margin-bottom:.55rem}
+  .yn .q .req{color:var(--old)}
+  .yn .opts{display:flex;gap:.4rem}
+  .yn .opts label{flex:1;position:relative}
+  .yn .opts input{position:absolute;opacity:0;width:0;height:0}
+  .yn .opts span{display:block;text-align:center;padding:.38rem;border:1px solid var(--rule-2);border-radius:3px;
+      font-size:.83rem;font-weight:650;color:var(--soft);cursor:pointer;background:#fff}
+  .yn .opts label.y input:checked + span{background:var(--new);border-color:transparent;color:#fff}
+  .yn .opts label.n input:checked + span{background:var(--old);border-color:transparent;color:#fff}
+  .yn .opts input:focus-visible + span{outline:2px solid var(--brand-2);outline-offset:2px}
+  .yn .err{color:var(--old);font-size:.75rem;min-height:.9rem;display:block;margin-top:.3rem}
+
+  /* attachment ledger rows */
+  .led{border:1px solid var(--rule);border-radius:5px;overflow:hidden}
+  .led .row{display:flex;align-items:center;gap:.85rem;padding:.7rem .9rem;border-top:1px solid var(--rule);
+      background:#fffdf9}
+  .led .row:first-child{border-top:0}
+  .led .no{font-family:var(--mono);font-size:.75rem;color:var(--soft);flex:none;width:1.4rem}
+  .led .m{flex:1;min-width:0}
+  .led .m b{display:block;font-size:.85rem;font-weight:650}
+  .led .m code{font-size:.72rem;color:var(--soft);font-family:var(--mono);word-break:break-all}
+  .led input[type=file]{max-width:200px;font-size:.76rem;color:var(--soft)}
+  .led .row[data-filled=yes]{background:var(--new-bg)}
+  .led .row[data-filled=yes] .no{color:var(--new);font-weight:800}
+
+  /* footer nav */
+  .foot{display:flex;align-items:center;gap:.8rem;margin-top:1.6rem;padding-top:1.2rem;border-top:1px solid var(--rule)}
+  .foot .note{flex:1;font-size:.78rem;color:var(--soft);font-family:var(--mono)}
+  .btn{all:unset;cursor:pointer;padding:.6rem 1.3rem;border-radius:3px;font-size:.87rem;font-weight:650}
+  .btn.go{background:var(--brand);color:#fff}
+  .btn.go:hover{background:var(--brand-2)}
+  .btn.back{border:1px solid var(--rule-2);color:var(--body)}
+  .btn.back:hover{border-color:var(--soft)}
+  .btn[hidden]{display:none}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header class="letterhead">
+    <div class="ttl">
+      <div class="ref">Form SR-AMD / rev 4</div>
+      <h1>Supplier Record Amendment &amp; Document Renewal</h1>
+      <p>Replace an expired credential and bring the registry record back into line.</p>
+    </div>
+    <div class="stamp"><b>Slide</b><span id="stampNo">1 / 6</span></div>
+  </header>
+
+  <nav class="chevrons" id="chevrons" aria-label="Amendment steps"></nav>
+
+  <form id="form" method="post" action="/dummy/vendor-registration/record-amendment-renewal" enctype="multipart/form-data" novalidate>
+  <div class="frame">
+    <div class="gutter" id="gutter">01</div>
+    <div class="card">
+
+      <section class="slide" data-title="Registry"><div class="inner">
+        <h2>Registry Account</h2>
+        <p class="lede">The registry record being amended and how the amendment reaches the buyer.</p>
+        <div class="grid">
+          <div class="f"><label for="a_acct">Supplier Registry Account ID <span class="req">*</span></label>
+            <input type="text" class="mono" id="a_acct" name="supplier_registry_account_id" required />
+            <span class="err" data-for="a_acct"></span></div>
+          <div class="f"><label for="a_contact">Updated Record Contact <span class="req">*</span></label>
+            <input type="text" id="a_contact" name="updated_record_contact" required />
+            <span class="err" data-for="a_contact"></span></div>
+          <div class="f"><label for="a_channel">Amendment Submission Channel <span class="req">*</span></label>
+            <select id="a_channel" name="amendment_submission_channel" required>
+              <option value="">Select channel…</option>
+              <option>Supplier portal upload</option><option>Email to procurement</option>
+              <option>Registry helpdesk ticket</option><option>Portal plus email copy</option>
+              <option>Courier of originals</option>
+            </select><span class="err" data-for="a_channel"></span></div>
+          <div class="f"><label for="a_ticket">Registry Update Ticket Number</label>
+            <input type="text" class="mono" id="a_ticket" name="registry_update_ticket_number" /></div>
+        </div>
+      </div></section>
+
+      <section class="slide" data-title="Credential" hidden><div class="inner">
+        <h2>Credential Being Replaced</h2>
+        <p class="lede">Which document expired, who reissued it, and why the record is changing.</p>
+        <div class="grid">
+          <div class="f"><label for="a_cred">Credential Selected for Replacement <span class="req">*</span></label>
+            <select id="a_cred" name="credential_selected_for_replacement" required>
+              <option value="">Select document type…</option>
+              <option>Commercial Registration</option><option>Trade Licence</option>
+              <option>VAT Certificate</option><option>National Address Certificate</option>
+              <option>Authorized Signatory Letter</option><option>Chamber of Commerce Membership</option>
+              <option>GOSI Certificate</option><option>Saudization Certificate</option>
+            </select><span class="err" data-for="a_cred"></span></div>
+          <div class="f"><label for="a_office">Renewal Issuing Office</label>
+            <input type="text" id="a_office" name="renewal_issuing_office" placeholder="ex: Riyadh Chamber" /></div>
+          <div class="f full"><label for="a_reason">Reason for Supplier Record Amendment <span class="req">*</span></label>
+            <input type="text" id="a_reason" name="reason_for_supplier_record_amendment"
+                   placeholder="ex: Certificate expired and has been reissued" required />
+            <span class="err" data-for="a_reason"></span></div>
+        </div>
+      </div></section>
+
+      <section class="slide" data-title="Before / after" hidden><div class="inner">
+        <h2>Superseded vs Revised</h2>
+        <p class="lede">The certificate coming off the record, beside the one replacing it.</p>
+        <div class="compare">
+          <div class="col old">
+            <div class="cap"><span class="pin"></span> Superseded</div>
+            <div class="f"><label for="a_oldref">Superseded Certificate Reference</label>
+              <input type="text" class="mono" id="a_oldref" name="superseded_certificate_reference" /></div>
+            <div class="f"><label for="a_oldend">Previous Validity End Date</label>
+              <input type="date" id="a_oldend" name="previous_validity_end_date" /></div>
+          </div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="col new">
+            <div class="cap"><span class="pin"></span> Revised</div>
+            <div class="f"><label for="a_newref">Newly Issued Certificate Reference <span class="req">*</span></label>
+              <input type="text" class="mono" id="a_newref" name="newly_issued_certificate_reference" required />
+              <span class="err" data-for="a_newref"></span></div>
+            <div class="f"><label for="a_newend">Revised Validity End Date <span class="req">*</span></label>
+              <input type="date" id="a_newend" name="revised_validity_end_date" required />
+              <span class="err" data-for="a_newend"></span></div>
+          </div>
+        </div>
+      </div></section>
+
+      <section class="slide" data-title="Dates" hidden><div class="inner">
+        <h2>Registry Dates</h2>
+        <p class="lede">Anniversary, annual confirmation, and when the expiry notice and amendment landed.</p>
+        <div class="grid">
+          <div class="f"><label for="a_anniv">Original Registration Anniversary</label>
+            <input type="date" id="a_anniv" name="original_registration_anniversary" /></div>
+          <div class="f"><label for="a_annual">Mandatory Annual Confirmation Date</label>
+            <input type="date" id="a_annual" name="mandatory_annual_confirmation_date" /></div>
+          <div class="f"><label for="a_notified">Expiry Notification Received On</label>
+            <input type="date" id="a_notified" name="expiry_notification_received_on" /></div>
+          <div class="f"><label for="a_completed">Profile Amendment Completed On</label>
+            <input type="date" id="a_completed" name="profile_amendment_completed_on" /></div>
+        </div>
+      </div></section>
+
+      <section class="slide" data-title="Confirmations" hidden><div class="inner">
+        <h2>Confirmations</h2>
+        <p class="lede">Name consistency, upload confirmation and where verification currently stands.</p>
+        <div class="grid" id="confGrid">
+          <div class="f"><label for="a_verify">Verification Progress <span class="req">*</span></label>
+            <select id="a_verify" name="verification_progress" required>
+              <option value="">Select status…</option>
+              <option>Not started</option><option>Documents submitted</option>
+              <option>Under registry review</option><option>Clarification requested</option>
+              <option>Verified</option><option>Rejected</option>
+            </select><span class="err" data-for="a_verify"></span></div>
+        </div>
+      </div></section>
+
+      <section class="slide" data-title="Attachments" hidden><div class="inner">
+        <h2>Renewed Documents &amp; Remarks</h2>
+        <p class="lede">Six renewed or updated documents, plus anything the reviewer should know.</p>
+        <div class="led" id="led"></div>
+        <div class="grid" style="margin-top:1.2rem">
+          <div class="f full"><label for="a_remarks">Document Renewal Remarks</label>
+            <textarea id="a_remarks" name="document_renewal_remarks"
+              placeholder="Delays at the issuing office, partial renewals, anything outstanding."></textarea></div>
+        </div>
+      </div></section>
+
+      <div class="foot">
+        <button type="button" class="btn back" id="back" hidden>← Back</button>
+        <span class="note" id="note"></span>
+        <button type="button" class="btn go" id="next">Continue →</button>
+        <button type="submit" class="btn go" id="submit" hidden>Submit amendment</button>
+      </div>
+    </div>
+  </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  function ynBlock(name, question, required) {
+    return '<div class="yn" data-yn="' + name + '"><div class="q">' + question +
+      (required ? ' <span class="req">*</span>' : '') + '</div><div class="opts">' +
+      '<label class="y"><input type="radio" name="' + name + '" value="Yes" id="' + name + '_yes"' +
+      (required ? ' required' : '') + ' /><span>Yes</span></label>' +
+      '<label class="n"><input type="radio" name="' + name + '" value="No" id="' + name + '_no" /><span>No</span></label>' +
+      '</div><span class="err" data-for="' + name + '_yes"></span></div>';
+  }
+
+  var grid = document.getElementById('confGrid');
+  var one = document.createElement('div'); one.className = 'f';
+  one.innerHTML = ynBlock('registered_name_consistency_confirmed', 'Registered Name Consistency Confirmed', true);
+  var two = document.createElement('div'); two.className = 'f';
+  two.innerHTML = ynBlock('replacement_file_uploaded', 'Replacement File Uploaded', true);
+  grid.insertBefore(two, grid.firstChild);
+  grid.insertBefore(one, grid.firstChild);
+
+  var DOCS = [
+    { n:'renewed_commercial_registration',      l:'Renewed Commercial Registration' },
+    { n:'renewed_trade_licence',                l:'Renewed Trade Licence' },
+    { n:'updated_vat_certificate',              l:'Updated VAT Certificate' },
+    { n:'updated_national_address',             l:'Updated National Address' },
+    { n:'record_amendment_confirmation',        l:'Record Amendment Confirmation' },
+    { n:'updated_authorized_signatory_letter',  l:'Updated Authorized Signatory Letter' }
+  ];
+  var led = document.getElementById('led');
+  DOCS.forEach(function (d, i) {
+    var row = document.createElement('div');
+    row.className = 'row'; row.setAttribute('data-filled', 'no');
+    row.innerHTML = '<span class="no">' + ('0' + (i + 1)).slice(-2) + '</span>' +
+      '<div class="m"><b>' + d.l + '</b><code>' + d.l + '.pdf</code></div>' +
+      '<input type="file" accept="application/pdf,.pdf" id="doc_' + i + '" name="' + d.n +
+      '" data-expected-filename="' + d.l + '.pdf" aria-label="' + d.l + '" />';
+    led.appendChild(row);
+    row.querySelector('input').addEventListener('change', function (e) {
+      row.setAttribute('data-filled', e.target.files.length ? 'yes' : 'no');
+    });
+  });
+
+  var slides = [].slice.call(document.querySelectorAll('.slide'));
+  var chev = document.getElementById('chevrons');
+  var gutter = document.getElementById('gutter'), stamp = document.getElementById('stampNo');
+  var back = document.getElementById('back'), next = document.getElementById('next');
+  var submit = document.getElementById('submit'), note = document.getElementById('note');
+  var cur = 0;
+
+  slides.forEach(function (s, i) {
+    var d = document.createElement('div');
+    d.innerHTML = '<b>' + ('0' + (i + 1)).slice(-2) + '</b>' + s.getAttribute('data-title');
+    d.addEventListener('click', function () { if (i < cur) show(i); });
+    chev.appendChild(d);
+  });
+
+  function show(i) {
+    cur = i;
+    slides.forEach(function (s, n) { s.hidden = n !== i; });
+    [].slice.call(chev.children).forEach(function (d, n) {
+      d.setAttribute('data-state', n === i ? 'now' : (n < i ? 'done' : 'todo'));
+      d.style.cursor = n < i ? 'pointer' : 'default';
+    });
+    gutter.textContent = ('0' + (i + 1)).slice(-2);
+    stamp.textContent = (i + 1) + ' / ' + slides.length;
+    note.textContent = 'Slide ' + (i + 1) + ' of ' + slides.length + ' · ' + slides[i].getAttribute('data-title');
+    back.hidden = i === 0;
+    next.hidden = i === slides.length - 1;
+    submit.hidden = i !== slides.length - 1;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function validate(i) {
+    var ok = true, seen = {};
+    slides[i].querySelectorAll('[required]').forEach(function (el) {
+      if (el.type === 'radio') {
+        if (seen[el.name]) return;
+        seen[el.name] = 1;
+        var picked = slides[i].querySelector('input[name="' + el.name + '"]:checked');
+        var slot = slides[i].querySelector('.err[data-for="' + el.name + '_yes"]');
+        if (slot) slot.textContent = picked ? '' : 'Choose Yes or No.';
+        if (!picked && ok) { el.focus(); ok = false; }
+        return;
+      }
+      var s = slides[i].querySelector('.err[data-for="' + el.id + '"]');
+      var bad = !el.value.trim();
+      if (s) s.textContent = bad ? 'Required.' : '';
+      if (bad && ok) { el.focus(); ok = false; }
+    });
+    // a revised expiry that is not after the superseded one is a data error worth catching here
+    if (ok && i === 2) {
+      var oldEnd = document.getElementById('a_oldend').value, newEnd = document.getElementById('a_newend').value;
+      if (oldEnd && newEnd && newEnd <= oldEnd) {
+        var slot2 = slides[i].querySelector('.err[data-for="a_newend"]');
+        if (slot2) slot2.textContent = 'Revised expiry must be later than the superseded one.';
+        document.getElementById('a_newend').focus();
+        ok = false;
+      }
+    }
+    return ok;
+  }
+
+  next.addEventListener('click', function () { if (validate(cur)) show(cur + 1); });
+  back.addEventListener('click', function () { show(cur - 1); });
+  document.getElementById('form').addEventListener('submit', function (e) {
+    if (!validate(slides.length - 1)) e.preventDefault();
+  });
+
+  show(0);
+})();
+</script>
+</body>
+</html>

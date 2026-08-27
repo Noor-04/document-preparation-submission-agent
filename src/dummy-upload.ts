@@ -164,6 +164,8 @@ const PREQUAL_FORM_FILE = 'vendor-registration-prequalification.html';
 const PREQUAL_FORM_PATH = '/dummy/vendor-registration/supplier-prequalification-update';
 const WORKFLOW_FORM_FILE = 'vendor-registration-portal-workflow.html';
 const WORKFLOW_FORM_PATH = '/dummy/vendor-registration/portal-workflow-status';
+const AMENDMENT_FORM_FILE = 'vendor-registration-amendment.html';
+const AMENDMENT_FORM_PATH = '/dummy/vendor-registration/record-amendment-renewal';
 const publicFile = (name: string): string => {
   const cwdPublic = join(process.cwd(), 'public', name);
   return existsSync(cwdPublic)
@@ -178,6 +180,7 @@ const ksaSamaFormPath = publicFile(KSA_SAMA_FORM_FILE);
 const portalFormPath = publicFile(PORTAL_FORM_FILE);
 const prequalFormPath = publicFile(PREQUAL_FORM_FILE);
 const workflowFormPath = publicFile(WORKFLOW_FORM_FILE);
+const amendmentFormPath = publicFile(AMENDMENT_FORM_FILE);
 
 export interface StoredFile {
   field: string;
@@ -595,7 +598,7 @@ function renderTemplatePicker(): string {
         <h2>Company presets</h2>
         <p>${esc(copy.pickerLead)}</p>
       </div>
-      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 11}</strong><small class="muted">10 pages each</small></div>
+      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 12}</strong><small class="muted">10 pages each</small></div>
     </aside>`,
     `<section class="card">
       <div class="hero">
@@ -666,6 +669,12 @@ function renderTemplatePicker(): string {
           <p class="muted">Dark slide deck tracking a supplier through a buyer portal: platform and channel, requested action, duplicate-profile check, workflow state, deadlines and evidence. Records no credentials.</p>
           <a href="/dummy/vendor-registration/portal-workflow-status"><button type="button" style="margin-top:.8rem">Open portal workflow form</button></a>
         </div>
+        <div class="doc-card" style="border-color:var(--accent)">
+          <strong>Supplier record amendment &amp; renewal</strong>
+          <small>Single form · 6 slides · 6 renewed documents</small>
+          <p class="muted">Paper-worksheet UI with a chevron breadcrumb and a superseded-versus-revised comparison panel. Replaces an expired credential and realigns the registry record.</p>
+          <a href="/dummy/vendor-registration/record-amendment-renewal"><button type="button" style="margin-top:.8rem">Open amendment form</button></a>
+        </div>
         ${COMPANY_TEMPLATES.map((template) => `<form method="post" action="/dummy/vendor-registration/start" class="doc-card">
           <input type="hidden" name="template" value="${esc(template.key)}">
           <strong>${esc(template.label)}</strong>
@@ -734,7 +743,7 @@ function renderLogin(error = '', returnTo = '/dummy/vendor-registration'): strin
 
 function safeLoginReturnTo(value: unknown): string {
   const requested = typeof value === 'string' ? value : '';
-  if (requested === UAE_FORM_PATH || requested === GLOBAL_FORM_PATH || requested === OMAN_FORM_PATH || requested === KSA_DECOR_FORM_PATH || requested === KSA_SAMA_FORM_PATH || requested === PORTAL_FORM_PATH || requested === PREQUAL_FORM_PATH || requested === WORKFLOW_FORM_PATH) return requested;
+  if (requested === UAE_FORM_PATH || requested === GLOBAL_FORM_PATH || requested === OMAN_FORM_PATH || requested === KSA_DECOR_FORM_PATH || requested === KSA_SAMA_FORM_PATH || requested === PORTAL_FORM_PATH || requested === PREQUAL_FORM_PATH || requested === WORKFLOW_FORM_PATH || requested === AMENDMENT_FORM_PATH) return requested;
   return /^\/dummy\/vendor-registration\/[0-9a-f-]+\/page\/(?:1|3)$/.test(requested)
     ? requested
     : '/dummy/vendor-registration';
@@ -1297,6 +1306,25 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
     if (session) sessions.delete(session);
     res.setHeader('Set-Cookie', 'dummy_session=; HttpOnly; SameSite=Lax; Path=/dummy; Max-Age=0');
     res.redirect(303, '/dummy/vendor-registration');
+  });
+
+  router.get('/vendor-registration/record-amendment-renewal', (req, res, next) => {
+    if (!isLoggedIn(req)) {
+      res.type('html').send(renderLogin('', AMENDMENT_FORM_PATH));
+      return;
+    }
+    readFile(amendmentFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+  });
+
+  router.post('/vendor-registration/record-amendment-renewal', (_req, res) => {
+    res.type('html').send(renderLayout(
+      'Amendment received',
+      'form',
+      '<aside class="aside"></aside>',
+      `<section class="card"><h2>Amendment received</h2>
+        <p class="muted">Supplier record amendment &amp; document renewal. Nothing left this machine &mdash; the dummy portal accepted the post and discarded it.</p>
+        <p><a href="/dummy/vendor-registration">Back to the flow picker</a></p></section>`,
+    ));
   });
 
   router.get('/vendor-registration/portal-workflow-status', (req, res, next) => {
