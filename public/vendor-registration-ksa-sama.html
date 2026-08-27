@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Regulatory Compliance Register — Sama Al Thuraya</title>
+<style>
+  :root{
+    --bg:#eef1f6; --card:#ffffff; --ink:#111a2b; --muted:#64708a; --line:#dfe4ee;
+    --navy:#1b2a52; --indigo:#3d5afe; --indigo-soft:#eaeeff;
+    --ok:#0b8a5c; --ok-soft:#e5f6ef; --warn:#b7791f; --warn-soft:#fdf5e4;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55}
+
+  /* top bar */
+  .appbar{background:var(--navy);color:#fff;padding:.85rem 1.5rem;display:flex;align-items:center;
+          gap:1rem;flex-wrap:wrap;position:sticky;top:0;z-index:20}
+  .appbar .mark{width:30px;height:30px;border-radius:8px;background:var(--indigo);display:grid;
+                place-items:center;font-weight:800;font-size:.8rem;letter-spacing:-.03em}
+  .appbar h1{font-size:1rem;margin:0;font-weight:600;letter-spacing:.01em}
+  .appbar .sep{opacity:.35}
+  .appbar .ent{font-size:.85rem;opacity:.85}
+  .appbar .chip{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
+                padding:.25rem .7rem;border-radius:999px;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase}
+
+  .page{max-width:1180px;margin:0 auto;padding:1.75rem 1.25rem 7rem}
+  .intro{margin:0 0 1.5rem;color:var(--muted);font-size:.92rem;max-width:62ch}
+
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:1.75rem;align-items:start}
+  @media(max-width:940px){.cols{grid-template-columns:1fr}}
+
+  /* section cards */
+  .sec{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:1.1rem;overflow:hidden}
+  .sec > header{display:flex;align-items:center;gap:.9rem;padding:1rem 1.15rem;cursor:pointer;user-select:none}
+  .sec > header:hover{background:#f8f9fc}
+  .sec .idx{flex:none;width:30px;height:30px;border-radius:9px;background:var(--indigo-soft);color:var(--indigo);
+            display:grid;place-items:center;font-weight:700;font-size:.82rem;font-variant-numeric:tabular-nums}
+  .sec .ttl{flex:1;min-width:0}
+  .sec .ttl b{display:block;font-size:.98rem;font-weight:650}
+  .sec .ttl small{color:var(--muted);font-size:.78rem}
+  .status{flex:none;font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+          padding:.25rem .6rem;border-radius:999px;background:var(--warn-soft);color:var(--warn);white-space:nowrap}
+  .sec[data-ready=yes] .status{background:var(--ok-soft);color:var(--ok)}
+  .sec[data-ready=yes] .idx{background:var(--ok-soft);color:var(--ok)}
+  .caret{flex:none;color:var(--muted);transition:transform .2s}
+  .sec[data-open=no] .caret{transform:rotate(-90deg)}
+  .sec[data-open=no] .body{display:none}
+  .body{padding:0 1.15rem 1.15rem;border-top:1px solid var(--line)}
+
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem 1.15rem;padding-top:1.15rem}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  .f{display:flex;flex-direction:column;gap:.28rem}
+  .f.full{grid-column:1/-1}
+  .f label{font-size:.78rem;font-weight:600;color:var(--muted);letter-spacing:.02em;text-transform:uppercase}
+  .f label .req{color:var(--indigo)}
+  .f input,.f select{font:inherit;font-size:.92rem;padding:.55rem .7rem;border-radius:9px;
+       border:1px solid var(--line);background:#fbfcfe;color:var(--ink);width:100%;transition:.15s}
+  .f input:focus,.f select:focus{outline:none;border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigo-soft);background:#fff}
+  .f .err{color:#c0392b;font-size:.75rem;min-height:.9rem}
+  .f .tip{color:var(--muted);font-size:.73rem}
+  .meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:.35rem}
+  .meter i{display:block;height:100%;width:0;background:var(--indigo);transition:width .25s}
+
+  /* attachment slot inside each card */
+  .slot{display:flex;align-items:center;gap:.85rem;margin-top:1.15rem;padding:.8rem .9rem;
+        border:1px dashed var(--line);border-radius:11px;background:#fbfcfe}
+  .slot .ic{flex:none;width:30px;height:30px;border-radius:8px;background:var(--indigo-soft);color:var(--indigo);
+            display:grid;place-items:center;font-size:.68rem;font-weight:800}
+  .slot .txt{flex:1;min-width:0}
+  .slot .txt b{display:block;font-size:.84rem;font-weight:600}
+  .slot .txt code{font-size:.75rem;color:var(--muted);font-family:var(--mono)}
+  .slot input[type=file]{max-width:205px;font-size:.78rem;color:var(--muted)}
+  .slot[data-filled=yes]{border-style:solid;border-color:var(--ok);background:var(--ok-soft)}
+  .slot[data-filled=yes] .ic{background:var(--ok);color:#fff}
+
+  /* sidebar */
+  .side{position:sticky;top:5rem;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1.25rem}
+  @media(max-width:940px){.side{position:static}}
+  .side h2{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 1rem}
+  .score{display:flex;align-items:center;gap:.9rem;margin-bottom:1.1rem}
+  .score .ring{width:64px;height:64px;border-radius:50%;flex:none;display:grid;place-items:center;
+       background:conic-gradient(var(--indigo) var(--pct,0%), var(--line) 0)}
+  .score .ring b{width:52px;height:52px;border-radius:50%;background:var(--card);display:grid;place-items:center;
+       font-size:.88rem;font-variant-numeric:tabular-nums}
+  .score p{margin:0;font-size:.82rem;color:var(--muted)}
+  .tracks{display:flex;flex-direction:column;gap:.7rem;margin-bottom:1.2rem}
+  .track .lab{display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:.25rem}
+  .track .lab span:last-child{color:var(--muted);font-variant-numeric:tabular-nums}
+  .track .bar{height:5px;border-radius:99px;background:var(--line);overflow:hidden}
+  .track .bar i{display:block;height:100%;width:0;background:var(--indigo);transition:width .25s}
+  .track[data-ready=yes] .bar i{background:var(--ok)}
+  .pledge{display:flex;gap:.6rem;align-items:flex-start;font-size:.82rem;padding-top:1rem;border-top:1px solid var(--line)}
+  .pledge input{margin-top:.25rem;accent-color:var(--indigo)}
+  .side .err{color:#c0392b;font-size:.75rem;min-height:.9rem}
+
+  /* submit bar */
+  .subbar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.92);
+          backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:.8rem 1.25rem;z-index:15}
+  .subbar .in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:1rem}
+  .subbar .note{font-size:.82rem;color:var(--muted);flex:1}
+  .btn{all:unset;cursor:pointer;background:var(--indigo);color:#fff;padding:.65rem 1.4rem;border-radius:10px;
+       font-size:.9rem;font-weight:650;transition:.15s}
+  .btn:hover{background:#2f49d6}
+  .btn.sec2{background:transparent;color:var(--muted);border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div class="appbar">
+  <div class="mark">SA</div>
+  <h1>Regulatory Compliance Register</h1>
+  <span class="sep">·</span>
+  <span class="ent">Sama Al Thuraya</span>
+  <span class="chip">Kingdom of Saudi Arabia</span>
+</div>
+
+<div class="page">
+  <p class="intro">Five regulatory areas, each paired with the certificate that evidences it. Complete a card's fields and attach its PDF to mark the area ready.</p>
+
+  <form id="form" method="post" action="/dummy/vendor-registration/ksa-sama-al-thuraya" enctype="multipart/form-data" novalidate>
+    <div class="cols">
+      <div>
+        <!-- issuing authority applies across the register -->
+        <section class="sec" data-open="yes" data-ready="no" data-key="auth">
+          <header><span class="idx">0</span>
+            <span class="ttl"><b>Verification &amp; Issuing Authority</b><small>Applies to every certificate below</small></span>
+            <span class="status">Incomplete</span><span class="caret">▾</span></header>
+          <div class="body"><div class="grid">
+            <div class="f">
+              <label for="s_body">Regulatory Issuing Body <span class="req">*</span></label>
+              <input type="text" id="s_body" name="regulatory_issuing_body" data-track required placeholder="ex: Ministry of Commerce" />
+              <span class="err" data-for="s_body"></span>
+            </div>
+            <div class="f">
+              <label for="s_docstatus">Compliance Document Status <span class="req">*</span></label>
+              <select id="s_docstatus" name="compliance_document_status" data-track required>
+                <option value="">Select status…</option>
+                <option>Verified</option><option>Pending verification</option>
+                <option>Under review</option><option>Rejected</option>
+              </select>
+              <span class="err" data-for="s_docstatus"></span>
+            </div>
+            <div class="f">
+              <label for="s_verified">Certificate Verification Date</label>
+              <input type="date" id="s_verified" name="certificate_verification_date" data-track />
+            </div>
+          </div></div>
+        </section>
+
+        <section class="sec" data-open="yes" data-ready="no" data-key="cd">
+          <header><span class="idx">1</span>
+            <span class="ttl"><b>Civil Defence</b><small>Safety permit and its expiry</small></span>
+            <span class="status">Incomplete</span><span class="caret">▾</span></header>
+          <div class="body"><div class="grid">
+            <div class="f">
+              <label for="s_cdref">Civil Defence Permit Reference <span class="req">*</span></label>
+              <input type="text" id="s_cdref" name="civil_defence_permit_reference" data-track required />
+              <span class="err" data-for="s_cdref"></span>
+            </div>
+            <div class="f">
+              <label for="s_cdend">Safety Permit Validity End <span class="req">*</span></label>
+              <input type="date" id="s_cdend" name="safety_permit_validity_end" data-track required />
+              <span class="err" data-for="s_cdend"></span>
+            </div>
+          </div>
+          <div class="slot" data-filled="no"><span class="ic">PDF</span>
+            <span class="txt"><b>Civil Defense License</b><code>Civil Defense License.pdf</code></span>
+            <input type="file" accept="application/pdf,.pdf" id="doc_cd" name="civil_defense_license"
+                   data-expected-filename="Civil Defense License.pdf" aria-label="Civil Defense License" /></div>
+          </div>
+        </section>
+
+        <section class="sec" data-open="yes" data-ready="no" data-key="gosi">
+          <header><span class="idx">2</span>
+            <span class="ttl"><b>Social Insurance — GOSI</b><small>Subscription and standing</small></span>
+            <span class="status">Incomplete</span><span class="caret">▾</span></header>
+          <div class="body"><div class="grid">
+            <div class="f">
+              <label for="s_gosicode">Social Insurance Subscription Code <span class="req">*</span></label>
+              <input type="text" id="s_gosicode" name="social_insurance_subscription_code" data-track required />
+              <span class="err" data-for="s_gosicode"></span>
+            </div>
+            <div class="f">
+              <label for="s_gosistatus">GOSI Registration Status <span class="req">*</span></label>
+              <select id="s_gosistatus" name="gosi_registration_status" data-track required>
+                <option value="">Select status…</option>
+                <option>Active</option><option>Suspended</option><option>Expired</option>
+              </select>
+              <span class="err" data-for="s_gosistatus"></span>
+            </div>
+          </div>
+          <div class="slot" data-filled="no"><span class="ic">PDF</span>
+            <span class="txt"><b>GOSI</b><code>GOSI.pdf</code></span>
+            <input type="file" accept="application/pdf,.pdf" id="doc_gosi" name="gosi"
+                   data-expected-filename="GOSI.pdf" aria-label="GOSI" /></div>
+          </div>
+        </section>
+
+        <section class="sec" data-open="yes" data-ready="no" data-key="nitaqat">
+          <header><span class="idx">3</span>
+            <span class="ttl"><b>Saudization — Nitaqat</b><small>Band, ratio and workforce split</small></span>
+            <span class="status">Incomplete</span><span class="caret">▾</span></header>
+          <div class="body"><div class="grid">
+            <div class="f">
+              <label for="s_band">Nitaqat Classification Level <span class="req">*</span></label>
+              <select id="s_band" name="nitaqat_classification_level" data-track required>
+                <option value="">Select band…</option>
+                <option>Platinum</option><option>High Green</option><option>Medium Green</option>
+                <option>Low Green</option><option>Yellow</option><option>Red</option>
+              </select>
+              <span class="err" data-for="s_band"></span>
+            </div>
+            <div class="f">
+              <label for="s_pct">Saudization Compliance Percentage</label>
+              <input type="number" id="s_pct" name="saudization_compliance_percentage" data-track min="0" max="100" step="0.1" placeholder="%" />
+              <div class="meter"><i id="pctBar"></i></div>
+            </div>
+            <div class="f">
+              <label for="s_local">Local Workforce Count</label>
+              <input type="number" id="s_local" name="local_workforce_count" data-track min="0" step="1" />
+            </div>
+            <div class="f">
+              <label for="s_foreign">Foreign Workforce Count</label>
+              <input type="number" id="s_foreign" name="foreign_workforce_count" data-track min="0" step="1" />
+              <span class="tip" id="ratioTip"></span>
+            </div>
+          </div>
+          <div class="slot" data-filled="no"><span class="ic">PDF</span>
+            <span class="txt"><b>Saudization Certificate (Nitaqat Certificate)</b><code>Saudization Certificate (Nitaqat Certificate).pdf</code></span>
+            <input type="file" accept="application/pdf,.pdf" id="doc_nitaqat" name="saudization_certificate_nitaqat"
+                   data-expected-filename="Saudization Certificate (Nitaqat Certificate).pdf" aria-label="Saudization Certificate (Nitaqat Certificate)" /></div>
+          </div>
+        </section>
+
+        <section class="sec" data-open="yes" data-ready="no" data-key="inv">
+          <header><span class="idx">4</span>
+            <span class="ttl"><b>Investment Licence</b><small>Trading permit and renewal</small></span>
+            <span class="status">Incomplete</span><span class="caret">▾</span></header>
+          <div class="body"><div class="grid">
+            <div class="f">
+              <label for="s_invid">Investment Licence Identifier <span class="req">*</span></label>
+              <input type="text" id="s_invid" name="investment_licence_identifier" data-track required />
+              <span class="err" data-for="s_invid"></span>
+            </div>
+            <div class="f">
+              <label for="s_invren">Investment Permit Renewal Date <span class="req">*</span></label>
+              <input type="date" id="s_invren" name="investment_permit_renewal_date" data-track required />
+              <span class="err" data-for="s_invren"></span>
+            </div>
+          </div>
+          <div class="slot" data-filled="no"><span class="ic">PDF</span>
+            <span class="txt"><b>Trading Investment License</b><code>Trading Investment License.pdf</code></span>
+            <input type="file" accept="application/pdf,.pdf" id="doc_inv" name="trading_investment_license"
+                   data-expected-filename="Trading Investment License.pdf" aria-label="Trading Investment License" /></div>
+          </div>
+        </section>
+
+        <section class="sec" data-open="yes" data-ready="no" data-key="zakat">
+          <header><span class="idx">5</span>
+            <span class="ttl"><b>Zakat</b><small>Certificate reference and validity</small></span>
+            <span class="status">Incomplete</span><span class="caret">▾</span></header>
+          <div class="body"><div class="grid">
+            <div class="f">
+              <label for="s_zref">Zakat Certificate Reference <span class="req">*</span></label>
+              <input type="text" id="s_zref" name="zakat_certificate_reference" data-track required />
+              <span class="err" data-for="s_zref"></span>
+            </div>
+            <div class="f">
+              <label for="s_zvalid">Zakat Compliance Valid Through <span class="req">*</span></label>
+              <input type="date" id="s_zvalid" name="zakat_compliance_valid_through" data-track required />
+              <span class="err" data-for="s_zvalid"></span>
+            </div>
+          </div>
+          <div class="slot" data-filled="no"><span class="ic">PDF</span>
+            <span class="txt"><b>ZAKAT</b><code>ZAKAT.pdf</code></span>
+            <input type="file" accept="application/pdf,.pdf" id="doc_zakat" name="zakat"
+                   data-expected-filename="ZAKAT.pdf" aria-label="ZAKAT" /></div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="side">
+        <h2>Compliance summary</h2>
+        <div class="score">
+          <div class="ring" id="ring"><b id="ringTxt">0%</b></div>
+          <p id="scoreNote">Nothing captured yet.</p>
+        </div>
+        <div class="tracks" id="tracks"></div>
+        <label class="pledge">
+          <input type="checkbox" id="s_declare" name="declaration" value="confirmed" required />
+          <span>I confirm these regulatory particulars are accurate for Sama Al Thuraya and match the attached certificates.</span>
+        </label>
+        <span class="err" data-for="s_declare"></span>
+      </aside>
+    </div>
+
+    <div class="subbar"><div class="in">
+      <span class="note" id="barNote">0 of 6 areas ready</span>
+      <button type="button" class="btn sec2" id="expand">Expand all</button>
+      <button type="submit" class="btn" id="submit">Submit register</button>
+    </div></div>
+  </form>
+</div>
+
+<script>
+(function () {
+  var LABELS = { auth:'Issuing authority', cd:'Civil Defence', gosi:'GOSI',
+                 nitaqat:'Saudization', inv:'Investment licence', zakat:'Zakat' };
+  var secs = [].slice.call(document.querySelectorAll('.sec'));
+
+  // collapse / expand
+  secs.forEach(function (sec) {
+    sec.querySelector('header').addEventListener('click', function () {
+      sec.setAttribute('data-open', sec.getAttribute('data-open') === 'yes' ? 'no' : 'yes');
+    });
+  });
+  document.getElementById('expand').addEventListener('click', function () {
+    var anyClosed = secs.some(function (s) { return s.getAttribute('data-open') === 'no'; });
+    secs.forEach(function (s) { s.setAttribute('data-open', anyClosed ? 'yes' : 'no'); });
+    this.textContent = anyClosed ? 'Collapse all' : 'Expand all';
+  });
+
+  // live tracks in the sidebar
+  var tracks = document.getElementById('tracks');
+  secs.forEach(function (sec) {
+    var k = sec.getAttribute('data-key');
+    var t = document.createElement('div');
+    t.className = 'track';
+    t.setAttribute('data-key', k);
+    t.innerHTML = '<div class="lab"><span>' + LABELS[k] + '</span><span data-n>0/0</span></div>' +
+                  '<div class="bar"><i></i></div>';
+    tracks.appendChild(t);
+  });
+
+  function progress(sec) {
+    var inputs = [].slice.call(sec.querySelectorAll('[data-track]'));
+    var file = sec.querySelector('input[type=file]');
+    var total = inputs.length + (file ? 1 : 0);
+    var done = inputs.filter(function (el) { return el.value.trim() !== ''; }).length +
+               (file && file.files.length ? 1 : 0);
+    return { done: done, total: total };
+  }
+
+  function refresh() {
+    var doneAreas = 0, sumDone = 0, sumTotal = 0;
+    secs.forEach(function (sec) {
+      var k = sec.getAttribute('data-key');
+      var p = progress(sec);
+      sumDone += p.done; sumTotal += p.total;
+      var ready = p.done === p.total;
+      if (ready) doneAreas++;
+      sec.setAttribute('data-ready', ready ? 'yes' : 'no');
+      sec.querySelector('.status').textContent = ready ? 'Ready' : 'Incomplete';
+      var t = tracks.querySelector('.track[data-key="' + k + '"]');
+      t.setAttribute('data-ready', ready ? 'yes' : 'no');
+      t.querySelector('[data-n]').textContent = p.done + '/' + p.total;
+      t.querySelector('.bar i').style.width = (p.total ? p.done / p.total * 100 : 0) + '%';
+    });
+    var pct = sumTotal ? Math.round(sumDone / sumTotal * 100) : 0;
+    document.getElementById('ring').style.setProperty('--pct', pct + '%');
+    document.getElementById('ringTxt').textContent = pct + '%';
+    document.getElementById('scoreNote').textContent =
+      pct === 100 ? 'All areas captured.' : sumDone + ' of ' + sumTotal + ' entries captured.';
+    document.getElementById('barNote').textContent = doneAreas + ' of ' + secs.length + ' areas ready';
+  }
+
+  // saudization meter + ratio hint
+  var pct = document.getElementById('s_pct'), bar = document.getElementById('pctBar');
+  var loc = document.getElementById('s_local'), fgn = document.getElementById('s_foreign');
+  var tip = document.getElementById('ratioTip');
+  function extras() {
+    var v = parseFloat(pct.value);
+    bar.style.width = (isNaN(v) ? 0 : Math.max(0, Math.min(100, v))) + '%';
+    var l = parseInt(loc.value, 10), f = parseInt(fgn.value, 10);
+    tip.textContent = (!isNaN(l) && !isNaN(f) && (l + f) > 0)
+      ? 'Total workforce ' + (l + f) + ' · ' + Math.round(l / (l + f) * 100) + '% local'
+      : '';
+  }
+
+  document.getElementById('form').addEventListener('input', function () { refresh(); extras(); });
+  document.getElementById('form').addEventListener('change', function (e) {
+    var slot = e.target.closest && e.target.closest('.slot');
+    if (slot && e.target.type === 'file') slot.setAttribute('data-filled', e.target.files.length ? 'yes' : 'no');
+    refresh(); extras();
+  });
+
+  document.getElementById('form').addEventListener('submit', function (e) {
+    var ok = true, first = null;
+    document.querySelectorAll('#form [required]').forEach(function (el) {
+      var slot = document.querySelector('.err[data-for="' + el.id + '"]');
+      var bad = el.type === 'checkbox' ? !el.checked : !el.value.trim();
+      if (slot) slot.textContent = bad ? 'Required.' : '';
+      if (bad && ok) { first = el; ok = false; }
+    });
+    if (!ok) {
+      e.preventDefault();
+      var sec = first.closest('.sec');
+      if (sec) sec.setAttribute('data-open', 'yes');
+      first.focus();
+    }
+  });
+
+  refresh();
+})();
+</script>
+</body>
+</html>
