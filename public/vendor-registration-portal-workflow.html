@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Portal Workflow &amp; Registration Status</title>
+<style>
+  :root{
+    --void:#0a0c11; --panel:#12161f; --panel-2:#1a2029; --line:#262e3b; --line-2:#333d4d;
+    --ink:#e8edf5; --dim:#8b97ab; --faint:#5b6678;
+    --amber:#f59e0b; --amber-d:#b45309; --amber-soft:rgba(245,158,11,.12);
+    --ok:#34d399; --ok-soft:rgba(52,211,153,.13); --no:#f87171;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--void);color:var(--ink);font-family:var(--sans);line-height:1.55;
+       background-image:radial-gradient(900px 480px at 78% -12%,rgba(245,158,11,.10),transparent 62%),
+                        radial-gradient(700px 400px at 8% 108%,rgba(52,211,153,.07),transparent 60%)}
+
+  .deck{max-width:1060px;margin:0 auto;padding:1.9rem 1.5rem 2.5rem;min-height:100vh;display:flex;flex-direction:column}
+
+  /* head + segmented progress */
+  .top{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.9rem}
+  .top .kick{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--amber)}
+  .top h1{font-size:1.14rem;margin:0;font-weight:600;flex:1;min-width:220px}
+  .top .count{font-family:var(--mono);font-size:.82rem;color:var(--dim)}
+  .top .count b{color:var(--ink)}
+  .segs{display:flex;gap:5px;margin-bottom:1.9rem}
+  .segs i{flex:1;height:3px;border-radius:99px;background:var(--line);transition:background .15s}
+  .segs i[data-on=yes]{background:var(--amber)}
+  .segs i[data-cur=yes]{background:var(--ink)}
+
+  /* stage */
+  .stage{position:relative;flex:1}
+  .numeral{position:absolute;top:-2.6rem;right:-.4rem;font-family:var(--mono);font-size:8.5rem;line-height:1;
+      font-weight:800;color:rgba(255,255,255,.032);pointer-events:none;user-select:none;letter-spacing:-.05em}
+  @media(max-width:720px){.numeral{font-size:5.5rem;top:-1.6rem}}
+  .viewport{overflow:hidden}
+  .track{display:flex;align-items:flex-start}
+  .slide{flex:0 0 100%;min-width:100%;padding-right:.2rem}
+  .slide[data-cur=no]{visibility:hidden}
+  .slide[data-cur=yes] .inner{animation:slidein .3s cubic-bezier(.2,.7,.3,1)}
+  @keyframes slidein{from{transform:translateX(14px)}to{transform:none}}
+  @media(prefers-reduced-motion:reduce){.slide .inner{animation:none}}
+
+  .slide h2{font-size:1.42rem;margin:0 0 .25rem;font-weight:650;letter-spacing:-.012em}
+  .slide .lede{margin:0 0 1.5rem;color:var(--dim);font-size:.88rem;max-width:60ch}
+
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.05rem 1.3rem}
+  @media(max-width:660px){.grid{grid-template-columns:1fr}}
+  .f{display:flex;flex-direction:column;gap:.3rem}
+  .f.full{grid-column:1/-1}
+  .f label{font-size:.78rem;font-weight:650;color:var(--dim);letter-spacing:.02em}
+  .f label .req{color:var(--amber)}
+  .f input,.f select,.f textarea{font:inherit;font-size:.9rem;padding:.58rem .72rem;border-radius:9px;
+      border:1px solid var(--line-2);background:var(--panel);color:var(--ink);width:100%}
+  .f input::placeholder,.f textarea::placeholder{color:var(--faint)}
+  .f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--amber);
+      box-shadow:0 0 0 3px var(--amber-soft);background:var(--panel-2)}
+  .f input.mono,.f input[type=url]{font-family:var(--mono);font-size:.85rem}
+  .f textarea{resize:vertical;min-height:104px}
+  .f .tip{font-size:.74rem;color:var(--faint)}
+  .f .err{color:var(--no);font-size:.75rem;min-height:.9rem}
+  .f select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),
+      linear-gradient(135deg,var(--dim) 50%,transparent 50%);
+      background-position:calc(100% - 17px) 55%,calc(100% - 12px) 55%;
+      background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:2rem}
+
+  /* yes / no — the chosen word is spelled out, never colour-only */
+  .yn{border:1px solid var(--line);border-radius:11px;background:var(--panel);padding:.8rem .95rem}
+  .yn .q{font-size:.85rem;font-weight:650;margin-bottom:.55rem}
+  .yn .q .req{color:var(--amber)}
+  .yn .opts{display:flex;gap:.4rem}
+  .yn .opts label{flex:1;position:relative}
+  .yn .opts input{position:absolute;opacity:0;width:0;height:0}
+  .yn .opts span{display:block;text-align:center;padding:.38rem;border-radius:8px;border:1px solid var(--line-2);
+      font-size:.83rem;font-weight:650;color:var(--dim);cursor:pointer;background:var(--panel-2)}
+  .yn .opts label.y input:checked + span{background:var(--ok);border-color:transparent;color:#06281d}
+  .yn .opts label.n input:checked + span{background:var(--no);border-color:transparent;color:#2b0b0b}
+  .yn .opts input:focus-visible + span{outline:2px solid var(--amber);outline-offset:2px}
+  .yn .err{color:var(--no);font-size:.75rem;min-height:.9rem;display:block;margin-top:.3rem}
+
+  /* file rows */
+  .doc{display:flex;align-items:center;gap:.85rem;padding:.7rem .85rem;border:1px solid var(--line);
+      border-radius:10px;background:var(--panel);margin-bottom:.55rem}
+  .doc .ic{flex:none;width:26px;height:26px;border-radius:7px;background:var(--amber-soft);color:var(--amber);
+      display:grid;place-items:center;font-size:.58rem;font-weight:800}
+  .doc .m{flex:1;min-width:0}
+  .doc .m b{display:block;font-size:.845rem;font-weight:600}
+  .doc .m code{font-size:.72rem;color:var(--faint);font-family:var(--mono);word-break:break-all}
+  .doc input[type=file]{max-width:195px;font-size:.76rem;color:var(--dim)}
+  .doc[data-filled=yes]{border-color:var(--ok);background:var(--ok-soft)}
+  .doc[data-filled=yes] .ic{background:var(--ok);color:#06281d}
+
+  .notice{display:flex;gap:.6rem;padding:.7rem .85rem;border-radius:10px;background:var(--amber-soft);
+      border:1px solid rgba(245,158,11,.3);font-size:.8rem;color:#fcd9a0;margin-bottom:1.2rem}
+
+  /* pager */
+  .pager{display:flex;align-items:center;gap:.9rem;margin-top:2rem;padding-top:1.2rem;border-top:1px solid var(--line)}
+  .dots{display:flex;gap:.4rem;flex:1;justify-content:center}
+  .dots button{all:unset;width:8px;height:8px;border-radius:50%;background:var(--line-2);cursor:default}
+  .dots button[data-on=yes]{background:var(--amber);width:22px;border-radius:99px}
+  .dots button[data-done=yes]{background:var(--dim)}
+  .nav{all:unset;cursor:pointer;padding:.58rem 1.25rem;border-radius:9px;font-size:.87rem;font-weight:650}
+  .nav.prev{border:1px solid var(--line-2);color:var(--dim)}
+  .nav.prev:hover{color:var(--ink);border-color:var(--dim)}
+  .nav.next{background:var(--amber);color:#2a1a02}
+  .nav.next:hover{background:#fbbf24}
+  .nav[hidden]{display:none}
+</style>
+</head>
+<body>
+<div class="deck">
+  <div class="top">
+    <span class="kick">Portal workflow</span>
+    <h1>Registration Status Record</h1>
+    <span class="count"><b id="cNow">01</b> / <span id="cAll">06</span></span>
+  </div>
+  <div class="segs" id="segs"></div>
+
+  <form id="form" method="post" action="/dummy/vendor-registration/portal-workflow-status" enctype="multipart/form-data" novalidate>
+  <div class="stage">
+    <div class="numeral" id="numeral">01</div>
+    <div class="viewport"><div class="track" id="track">
+
+      <section class="slide" data-cur="yes" data-title="Platform"><div class="inner">
+        <h2>Platform &amp; Access</h2>
+        <p class="lede">Which portal this supplier registers through, and the mailbox that holds the account.</p>
+        <div class="notice">No password is recorded anywhere on this form. Only whether portal access was received.</div>
+        <div class="grid">
+          <div class="f"><label for="w_provider">Registration Platform Provider <span class="req">*</span></label>
+            <select id="w_provider" name="registration_platform_provider" required>
+              <option value="">Select provider…</option>
+              <option>SAP Ariba</option><option>Oracle Supplier Portal</option><option>Coupa</option>
+              <option>Jaggaer</option><option>SANS portal</option><option>In-house buyer portal</option><option>Email only</option>
+            </select><span class="err" data-for="w_provider"></span></div>
+          <div class="f"><label for="w_channel">Required Submission Channel <span class="req">*</span></label>
+            <select id="w_channel" name="required_submission_channel" required>
+              <option value="">Select channel…</option>
+              <option>Supplier portal</option><option>Email to procurement</option>
+              <option>Portal plus email copy</option><option>Physical courier</option><option>In-person delivery</option>
+            </select><span class="err" data-for="w_channel"></span></div>
+          <div class="f full"><label for="w_url">Supplier Portal Address <span class="req">*</span></label>
+            <input type="url" id="w_url" name="supplier_portal_address" required placeholder="https://supplier.example.com" />
+            <span class="err" data-for="w_url"></span></div>
+          <div class="f"><label for="w_bu">Portal Business Unit</label>
+            <input type="text" id="w_bu" name="portal_business_unit" /></div>
+          <div class="f"><label for="w_mailbox">Registered User Mailbox <span class="req">*</span></label>
+            <input type="email" id="w_mailbox" name="registered_user_mailbox" required />
+            <span class="err" data-for="w_mailbox"></span></div>
+          <div class="f"><label for="w_support">Support Contact Address</label>
+            <input type="email" id="w_support" name="support_contact_address" placeholder="portal-support@example.com" /></div>
+          <div class="f" id="accessHolder"></div>
+        </div>
+      </div></section>
+
+      <section class="slide" data-cur="no" data-title="Invitation"><div class="inner">
+        <h2>Invitation &amp; Requested Action</h2>
+        <p class="lede">The invitation that triggered this record and what is being asked of the supplier.</p>
+        <div class="grid">
+          <div class="f"><label for="w_invref">Invitation Tracking Reference</label>
+            <input type="text" class="mono" id="w_invref" name="invitation_tracking_reference" /></div>
+          <div class="f"><label for="w_action">Requested Registration Action <span class="req">*</span></label>
+            <select id="w_action" name="requested_registration_action" required>
+              <option value="">Select action…</option>
+              <option>Create New Registration</option><option>Update Existing Profile</option>
+              <option>Resume Saved Application</option><option>Review Supplier Information</option>
+              <option>Complete Qualification Questionnaire</option><option>Complete Supplier Survey</option>
+              <option>Upload Renewed Documents</option>
+            </select><span class="err" data-for="w_action"></span></div>
+          <div class="f full"><label for="w_saved">Saved Application Link</label>
+            <input type="url" id="w_saved" name="saved_application_link" placeholder="https://supplier.example.com/draft/…" />
+            <span class="tip">The resume link from the portal's saved-application email.</span></div>
+        </div>
+      </div></section>
+
+      <section class="slide" data-cur="no" data-title="Existing profile"><div class="inner">
+        <h2>Existing Profile Check</h2>
+        <p class="lede">Whether this supplier already exists on the platform, and under which entity.</p>
+        <div class="grid" id="dupGrid">
+          <div class="f full"><label for="w_entity">Currently Registered Entity</label>
+            <input type="text" id="w_entity" name="currently_registered_entity" />
+            <span class="tip">The legal entity name the existing portal profile is held under.</span></div>
+        </div>
+      </div></section>
+
+      <section class="slide" data-cur="no" data-title="Workflow state"><div class="inner">
+        <h2>Workflow State</h2>
+        <p class="lede">Where each portal task currently stands.</p>
+        <div class="grid">
+          <div class="f"><label for="w_appstate">Current Application State <span class="req">*</span></label>
+            <select id="w_appstate" name="current_application_state" required>
+              <option value="">Select state…</option>
+              <option>Not started</option><option>Invitation received</option><option>Draft saved</option>
+              <option>In progress</option><option>Submitted</option><option>Under buyer review</option>
+              <option>Returned for clarification</option><option>Approved</option><option>Rejected</option>
+            </select><span class="err" data-for="w_appstate"></span></div>
+          <div class="f"><label for="w_docstate">Portal Documentation Status <span class="req">*</span></label>
+            <select id="w_docstate" name="portal_documentation_status" required>
+              <option value="">Select status…</option>
+              <option>None uploaded</option><option>Partially uploaded</option><option>All uploaded</option>
+              <option>Expired documents present</option><option>Verified</option>
+            </select><span class="err" data-for="w_docstate"></span></div>
+          <div class="f"><label for="w_qual">Qualification Task State</label>
+            <select id="w_qual" name="qualification_task_state">
+              <option value="">Select state…</option>
+              <option>Not issued</option><option>Issued</option><option>In progress</option>
+              <option>Submitted</option><option>Qualified</option><option>Disqualified</option>
+            </select></div>
+          <div class="f"><label for="w_survey">Supplier Survey Progress</label>
+            <select id="w_survey" name="supplier_survey_progress">
+              <option value="">Select progress…</option>
+              <option>Not started</option><option>Started</option><option>Half complete</option>
+              <option>Almost complete</option><option>Completed</option>
+            </select></div>
+        </div>
+      </div></section>
+
+      <section class="slide" data-cur="no" data-title="Dates"><div class="inner">
+        <h2>Deadlines &amp; Confirmation</h2>
+        <p class="lede">Key dates and the confirmation the portal issued on submission.</p>
+        <div class="grid">
+          <div class="f"><label for="w_due">Registration Due By <span class="req">*</span></label>
+            <input type="date" id="w_due" name="registration_due_by" required />
+            <span class="err" data-for="w_due"></span></div>
+          <div class="f"><label for="w_renewal">Record Renewal Window</label>
+            <input type="date" id="w_renewal" name="record_renewal_window" />
+            <span class="tip">Date the record next falls due for renewal.</span></div>
+          <div class="f"><label for="w_reminder">Most Recent Reminder Date</label>
+            <input type="date" id="w_reminder" name="most_recent_reminder_date" /></div>
+          <div class="f"><label for="w_final">Final Submission Timestamp</label>
+            <input type="datetime-local" id="w_final" name="final_submission_timestamp" /></div>
+          <div class="f"><label for="w_confref">Portal Confirmation Reference</label>
+            <input type="text" class="mono" id="w_confref" name="portal_confirmation_reference" /></div>
+          <div class="f" id="evidenceHolder"></div>
+          <div class="f full"><label for="w_evidencefile">Submission evidence file</label>
+            <input type="file" id="w_evidencefile" name="submission_evidence_file"
+                   accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg" />
+            <span class="tip">Screenshot or PDF proving the submission went through.</span></div>
+        </div>
+      </div></section>
+
+      <section class="slide" data-cur="no" data-title="Attachments"><div class="inner">
+        <h2>Supporting Attachments &amp; Notes</h2>
+        <p class="lede">Five supporting documents, plus anything that did not fit the fields above.</p>
+        <div id="docs"></div>
+        <div class="grid" style="margin-top:1.2rem">
+          <div class="f full"><label for="w_notes">Registration Exception Notes</label>
+            <textarea id="w_notes" name="registration_exception_notes"
+              placeholder="Blocked steps, duplicate-account findings, portal errors, anything the reviewer should know."></textarea></div>
+        </div>
+      </div></section>
+
+    </div></div>
+  </div>
+
+  <div class="pager">
+    <button type="button" class="nav prev" id="prev" hidden>← Previous</button>
+    <div class="dots" id="dots"></div>
+    <button type="button" class="nav next" id="next">Next slide →</button>
+    <button type="submit" class="nav next" id="submit" hidden>Submit record</button>
+  </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  function ynBlock(name, question, required) {
+    return '<div class="yn" data-yn="' + name + '"><div class="q">' + question +
+      (required ? ' <span class="req">*</span>' : '') + '</div><div class="opts">' +
+      '<label class="y"><input type="radio" name="' + name + '" value="Yes" id="' + name + '_yes"' +
+      (required ? ' required' : '') + ' /><span>Yes</span></label>' +
+      '<label class="n"><input type="radio" name="' + name + '" value="No" id="' + name + '_no" /><span>No</span></label>' +
+      '</div><span class="err" data-for="' + name + '_yes"></span></div>';
+  }
+
+  // access is recorded as a plain yes/no; no credential field exists on this form
+  document.getElementById('accessHolder').innerHTML =
+    ynBlock('portal_access_received', 'Portal access received', false);
+
+  var dup = document.getElementById('dupGrid');
+  var a = document.createElement('div'); a.className = 'f';
+  a.innerHTML = ynBlock('existing_supplier_profile_found', 'Existing Supplier Profile Found', true);
+  var b = document.createElement('div'); b.className = 'f';
+  b.innerHTML = ynBlock('duplicate_account_warning', 'Duplicate Account Warning', true);
+  dup.insertBefore(b, dup.firstChild); dup.insertBefore(a, dup.firstChild);
+
+  document.getElementById('evidenceHolder').innerHTML =
+    ynBlock('submission_evidence_available', 'Submission Evidence Available', false);
+
+  var DOCS = [
+    { n:'portal_registration_invitation',  l:'Portal Registration Invitation' },
+    { n:'supplier_portal_user_guide',      l:'Supplier Portal User Guide' },
+    { n:'saved_application_confirmation',  l:'Saved Application Confirmation' },
+    { n:'existing_profile_screenshot',     l:'Existing Profile Screenshot' },
+    { n:'portal_submission_receipt',       l:'Portal Submission Receipt' }
+  ];
+  var docs = document.getElementById('docs');
+  DOCS.forEach(function (d, i) {
+    var row = document.createElement('div');
+    row.className = 'doc'; row.setAttribute('data-filled', 'no');
+    row.innerHTML = '<span class="ic">PDF</span><div class="m"><b>' + d.l + '</b><code>' + d.l + '.pdf</code></div>' +
+      '<input type="file" accept="application/pdf,.pdf" id="doc_' + i + '" name="' + d.n +
+      '" data-expected-filename="' + d.l + '.pdf" aria-label="' + d.l + '" />';
+    docs.appendChild(row);
+    row.querySelector('input').addEventListener('change', function (e) {
+      row.setAttribute('data-filled', e.target.files.length ? 'yes' : 'no');
+    });
+  });
+
+  var slides = [].slice.call(document.querySelectorAll('.slide'));
+  var track = document.getElementById('track');
+  var segs = document.getElementById('segs'), dots = document.getElementById('dots');
+  var prev = document.getElementById('prev'), next = document.getElementById('next'), submit = document.getElementById('submit');
+  var numeral = document.getElementById('numeral'), cNow = document.getElementById('cNow');
+  var cur = 0;
+
+  document.getElementById('cAll').textContent = ('0' + slides.length).slice(-2);
+  slides.forEach(function (s, i) {
+    segs.appendChild(document.createElement('i'));
+    var d = document.createElement('button');
+    d.type = 'button'; d.title = s.getAttribute('data-title');
+    d.addEventListener('click', function () { if (i < cur) show(i); });
+    dots.appendChild(d);
+  });
+
+  function show(i) {
+    cur = i;
+    // the track jumps rather than animating: a half-finished transform would leave
+    // two slides on screen, which anything reading the page as an image cannot resolve
+    track.style.transform = 'translateX(-' + (i * 100) + '%)';
+    slides.forEach(function (s, n) { s.setAttribute('data-cur', n === i ? 'yes' : 'no'); });
+    [].slice.call(segs.children).forEach(function (el, n) {
+      el.setAttribute('data-on', n <= i ? 'yes' : 'no');
+      el.setAttribute('data-cur', n === i ? 'yes' : 'no');
+    });
+    [].slice.call(dots.children).forEach(function (el, n) {
+      el.setAttribute('data-on', n === i ? 'yes' : 'no');
+      el.setAttribute('data-done', n < i ? 'yes' : 'no');
+    });
+    numeral.textContent = ('0' + (i + 1)).slice(-2);
+    cNow.textContent = ('0' + (i + 1)).slice(-2);
+    prev.hidden = i === 0;
+    next.hidden = i === slides.length - 1;
+    submit.hidden = i !== slides.length - 1;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function validate(i) {
+    var ok = true, seen = {};
+    slides[i].querySelectorAll('[required]').forEach(function (el) {
+      if (el.type === 'radio') {
+        if (seen[el.name]) return;
+        seen[el.name] = 1;
+        var picked = slides[i].querySelector('input[name="' + el.name + '"]:checked');
+        var slot = slides[i].querySelector('.err[data-for="' + el.name + '_yes"]');
+        if (slot) slot.textContent = picked ? '' : 'Choose Yes or No.';
+        if (!picked && ok) { el.focus(); ok = false; }
+        return;
+      }
+      var s = slides[i].querySelector('.err[data-for="' + el.id + '"]');
+      var bad = !el.value.trim() || (el.type === 'url' && !/^https?:\/\/.+/i.test(el.value.trim()));
+      if (s) s.textContent = bad ? (el.type === 'url' ? 'Enter a full http(s) address.' : 'Required.') : '';
+      if (bad && ok) { el.focus(); ok = false; }
+    });
+    return ok;
+  }
+
+  next.addEventListener('click', function () { if (validate(cur)) show(cur + 1); });
+  prev.addEventListener('click', function () { show(cur - 1); });
+  document.getElementById('form').addEventListener('submit', function (e) {
+    if (!validate(slides.length - 1)) e.preventDefault();
+  });
+
+  show(0);
+})();
+</script>
+</body>
+</html>
