@@ -152,6 +152,8 @@ const UAE_FORM_FILE = 'vendor-registration-form.html';
 export const UAE_FORM_PATH = '/dummy/vendor-registration/uae-abu-dhabi';
 const GLOBAL_FORM_FILE = 'vendor-registration-sedar-global.html';
 const GLOBAL_FORM_PATH = '/dummy/vendor-registration/abudhabi-sedar-global';
+const OMAN_FORM_FILE = 'vendor-registration-oman.html';
+const OMAN_FORM_PATH = '/dummy/vendor-registration/oman';
 const publicFile = (name: string): string => {
   const cwdPublic = join(process.cwd(), 'public', name);
   return existsSync(cwdPublic)
@@ -160,6 +162,7 @@ const publicFile = (name: string): string => {
 };
 const uaeFormPath = publicFile(UAE_FORM_FILE);
 const globalFormPath = publicFile(GLOBAL_FORM_FILE);
+const omanFormPath = publicFile(OMAN_FORM_FILE);
 
 export interface StoredFile {
   field: string;
@@ -577,7 +580,7 @@ function renderTemplatePicker(): string {
         <h2>Company presets</h2>
         <p>${esc(copy.pickerLead)}</p>
       </div>
-      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 5}</strong><small class="muted">10 pages each</small></div>
+      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 6}</strong><small class="muted">10 pages each</small></div>
     </aside>`,
     `<section class="card">
       <div class="hero">
@@ -611,6 +614,12 @@ function renderTemplatePicker(): string {
           <small>UAE · Abu Dhabi · LTD · 5 required documents</small>
           <p class="muted">Different layout and renamed fields: registration reference, establishment code, taxpayer identifier, warranty and financial reporting periods.</p>
           <a href="/dummy/vendor-registration/abudhabi-sedar-global"><button type="button" style="margin-top:.8rem">Open Sedar Global form</button></a>
+        </div>
+        <div class="doc-card" style="border-color:var(--accent)">
+          <strong>Oman supplier onboarding</strong>
+          <small>Oman · single page · 5 steps · 5 required documents</small>
+          <p class="muted">Entirely separate UI: one page with a five-step wizard, client-side step validation and a review screen before submit.</p>
+          <a href="/dummy/vendor-registration/oman"><button type="button" style="margin-top:.8rem">Open Oman form</button></a>
         </div>
         ${COMPANY_TEMPLATES.map((template) => `<form method="post" action="/dummy/vendor-registration/start" class="doc-card">
           <input type="hidden" name="template" value="${esc(template.key)}">
@@ -680,7 +689,7 @@ function renderLogin(error = '', returnTo = '/dummy/vendor-registration'): strin
 
 function safeLoginReturnTo(value: unknown): string {
   const requested = typeof value === 'string' ? value : '';
-  if (requested === UAE_FORM_PATH || requested === GLOBAL_FORM_PATH) return requested;
+  if (requested === UAE_FORM_PATH || requested === GLOBAL_FORM_PATH || requested === OMAN_FORM_PATH) return requested;
   return /^\/dummy\/vendor-registration\/[0-9a-f-]+\/page\/(?:1|3)$/.test(requested)
     ? requested
     : '/dummy/vendor-registration';
@@ -1243,6 +1252,25 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
     if (session) sessions.delete(session);
     res.setHeader('Set-Cookie', 'dummy_session=; HttpOnly; SameSite=Lax; Path=/dummy; Max-Age=0');
     res.redirect(303, '/dummy/vendor-registration');
+  });
+
+  router.get('/vendor-registration/oman', (req, res, next) => {
+    if (!isLoggedIn(req)) {
+      res.type('html').send(renderLogin('', OMAN_FORM_PATH));
+      return;
+    }
+    readFile(omanFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+  });
+
+  router.post('/vendor-registration/oman', (_req, res) => {
+    res.type('html').send(renderLayout(
+      'Registration received',
+      'form',
+      '<aside class="aside"></aside>',
+      `<section class="card"><h2>Registration received</h2>
+        <p class="muted">Oman entity. Nothing left this machine &mdash; the dummy portal accepted the post and discarded it.</p>
+        <p><a href="/dummy/vendor-registration">Back to the flow picker</a></p></section>`,
+    ));
   });
 
   router.get('/vendor-registration/abudhabi-sedar-global', (req, res, next) => {

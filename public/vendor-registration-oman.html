@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Supplier Onboarding — Oman</title>
+<style>
+  :root{
+    --bg:#0f1720; --panel:#16212c; --panel-2:#1c2936; --line:#2b3a49;
+    --ink:#e7eef5; --muted:#93a5b6; --accent:#3ddc97; --accent-ink:#06231a;
+    --danger:#ff6b6b; --radius:14px;
+    --font:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.5}
+  .wrap{max-width:940px;margin:0 auto;padding:2rem 1.25rem 4rem}
+  header.masthead{display:flex;align-items:baseline;gap:.75rem;flex-wrap:wrap;margin-bottom:.25rem}
+  header.masthead h1{font-size:1.5rem;margin:0;letter-spacing:-.01em}
+  .pill{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
+        font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;padding:.25rem .6rem;border-radius:999px}
+  .lede{color:var(--muted);margin:.35rem 0 1.5rem}
+
+  /* stepper */
+  .stepper{display:flex;gap:.4rem;margin-bottom:1.25rem;flex-wrap:wrap}
+  .stepper button{all:unset;cursor:pointer;display:flex;align-items:center;gap:.5rem;
+      padding:.5rem .8rem;border-radius:999px;border:1px solid var(--line);background:var(--panel);
+      color:var(--muted);font-size:.83rem}
+  .stepper button .n{display:grid;place-items:center;width:1.35rem;height:1.35rem;border-radius:50%;
+      background:var(--panel-2);font-size:.75rem;font-variant-numeric:tabular-nums}
+  .stepper button[aria-current="step"]{border-color:var(--accent);color:var(--ink)}
+  .stepper button[aria-current="step"] .n{background:var(--accent);color:var(--accent-ink);font-weight:700}
+  .stepper button[data-done="yes"] .n{background:#284b3d;color:var(--accent)}
+  .bar{height:4px;background:var(--panel-2);border-radius:99px;overflow:hidden;margin-bottom:1.5rem}
+  .bar i{display:block;height:100%;background:var(--accent);width:20%;transition:width .25s ease}
+
+  /* panels */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:1.4rem}
+  .panel h2{margin:0 0 .2rem;font-size:1.1rem}
+  .panel .hint{color:var(--muted);font-size:.87rem;margin:0 0 1.15rem}
+  fieldset{border:0;margin:0;padding:0}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+  @media(max-width:660px){.grid{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column;gap:.35rem}
+  .field.full{grid-column:1/-1}
+  label{font-size:.85rem;color:var(--ink)}
+  label .req{color:var(--accent)}
+  input[type=text],input[type=date],input[type=number],select,textarea{
+      background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+      border-radius:9px;padding:.6rem .7rem;font:inherit;font-size:.9rem;width:100%}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .err{color:var(--danger);font-size:.78rem;min-height:1rem}
+
+  /* uploads */
+  .doc{display:flex;align-items:center;gap:.9rem;padding:.8rem .9rem;border:1px dashed var(--line);
+       border-radius:11px;background:var(--panel-2);margin-bottom:.65rem}
+  .doc .meta{flex:1;min-width:0}
+  .doc .name{font-size:.9rem}
+  .doc .want{font-size:.76rem;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace}
+  .doc input[type=file]{max-width:230px;font-size:.8rem}
+  .doc[data-filled=yes]{border-style:solid;border-color:var(--accent)}
+
+  /* review */
+  .review{border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .review div{display:flex;gap:1rem;padding:.5rem .8rem;font-size:.85rem;border-bottom:1px solid var(--line)}
+  .review div:last-child{border-bottom:0}
+  .review dt{color:var(--muted);flex:0 0 46%;margin:0}
+  .review dd{margin:0;flex:1;word-break:break-word}
+  .check{display:flex;gap:.6rem;align-items:flex-start;margin:1.1rem 0 0;font-size:.88rem}
+  .check input{margin-top:.25rem}
+
+  /* nav */
+  .nav{display:flex;justify-content:space-between;gap:.75rem;margin-top:1.4rem}
+  button.btn{all:unset;cursor:pointer;padding:.6rem 1.15rem;border-radius:9px;font-size:.9rem;font-weight:600}
+  .btn.primary{background:var(--accent);color:var(--accent-ink)}
+  .btn.ghost{border:1px solid var(--line);color:var(--muted)}
+  .btn[hidden]{display:none}
+  .step[hidden]{display:none}
+  .done{text-align:center;padding:2.5rem 1rem}
+  .done .tick{font-size:2.4rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <h1>Supplier Onboarding</h1>
+    <span class="pill">Oman</span>
+    <span class="pill" id="entityPill">Entity: Oman</span>
+  </header>
+  <p class="lede">Five steps, one page. Nothing is submitted until the final step.</p>
+
+  <nav class="stepper" id="stepper" aria-label="Progress"></nav>
+  <div class="bar"><i id="bar"></i></div>
+
+  <form id="form" method="post" action="/dummy/vendor-registration/oman" enctype="multipart/form-data" novalidate>
+
+    <section class="step panel" data-step="1">
+      <h2>Entity Identity</h2>
+      <p class="hint">Commercial record details as held by the Ministry of Commerce, Industry and Investment Promotion.</p>
+      <fieldset><div class="grid">
+        <div class="field full">
+          <label for="f_title">Supplier’s Official Registered Title <span class="req">*</span></label>
+          <input type="text" id="f_title" name="supplier_official_registered_title" required autocomplete="organization" />
+          <span class="err" data-for="f_title"></span>
+        </div>
+        <div class="field">
+          <label for="f_registry">Incorporation Registry Code <span class="req">*</span></label>
+          <input type="text" id="f_registry" name="incorporation_registry_code" required placeholder="CR 1234567" />
+          <span class="err" data-for="f_registry"></span>
+        </div>
+        <div class="field">
+          <label for="f_class">Primary Goods/Services Classification</label>
+          <input type="text" id="f_class" name="primary_goods_services_classification" placeholder="ex: Interior fit-out" />
+        </div>
+        <div class="field">
+          <label for="f_activation">Commercial Record Activation Date</label>
+          <input type="date" id="f_activation" name="commercial_record_activation_date" />
+        </div>
+        <div class="field">
+          <label for="f_renewal">Commercial Record Renewal Deadline <span class="req">*</span></label>
+          <input type="date" id="f_renewal" name="commercial_record_renewal_deadline" required />
+          <span class="err" data-for="f_renewal"></span>
+        </div>
+      </div></fieldset>
+    </section>
+
+    <section class="step panel" data-step="2" hidden>
+      <h2>Tax &amp; Banking</h2>
+      <p class="hint">Taxpayer registration and the account that will receive settlement.</p>
+      <fieldset><div class="grid">
+        <div class="field">
+          <label for="f_tin">Oman Taxpayer Identification Code <span class="req">*</span></label>
+          <input type="text" id="f_tin" name="oman_taxpayer_identification_code" required />
+          <span class="err" data-for="f_tin"></span>
+        </div>
+        <div class="field">
+          <label for="f_taxstart">Tax Registration Commencement Date</label>
+          <input type="date" id="f_taxstart" name="tax_registration_commencement_date" />
+        </div>
+        <div class="field">
+          <label for="f_bank">Beneficiary Banking Institution <span class="req">*</span></label>
+          <input type="text" id="f_bank" name="beneficiary_banking_institution" required />
+          <span class="err" data-for="f_bank"></span>
+        </div>
+        <div class="field">
+          <label for="f_iban">International Bank Account Reference <span class="req">*</span></label>
+          <input type="text" id="f_iban" name="international_bank_account_reference" required placeholder="OM00 0000 0000 0000 0000 000" />
+          <span class="err" data-for="f_iban"></span>
+        </div>
+        <div class="field">
+          <label for="f_bankdate">Banking Confirmation Date</label>
+          <input type="date" id="f_bankdate" name="banking_confirmation_date" />
+        </div>
+      </div></fieldset>
+    </section>
+
+    <section class="step panel" data-step="3" hidden>
+      <h2>Financial Standing &amp; Experience</h2>
+      <p class="hint">Most recent audited figures and one comparable completed project.</p>
+      <fieldset><div class="grid">
+        <div class="field">
+          <label for="f_fy">Latest Audited Fiscal Year <span class="req">*</span></label>
+          <input type="number" id="f_fy" name="latest_audited_fiscal_year" required min="1980" max="2100" step="1" placeholder="2025" />
+          <span class="err" data-for="f_fy"></span>
+        </div>
+        <div class="field">
+          <label for="f_rev">Reported Annual Revenue</label>
+          <input type="text" id="f_rev" name="reported_annual_revenue" placeholder="OMR" />
+        </div>
+        <div class="field full">
+          <label for="f_auditor">Independent Auditor Firm</label>
+          <input type="text" id="f_auditor" name="independent_auditor_firm" />
+        </div>
+        <div class="field full">
+          <label for="f_proj">Completed Project Reference</label>
+          <input type="text" id="f_proj" name="completed_project_reference" />
+        </div>
+        <div class="field">
+          <label for="f_client">Project Client Organisation</label>
+          <input type="text" id="f_client" name="project_client_organisation" />
+        </div>
+        <div class="field">
+          <label for="f_year">Project Completion Year</label>
+          <input type="number" id="f_year" name="project_completion_year" min="1980" max="2100" step="1" />
+        </div>
+      </div></fieldset>
+    </section>
+
+    <section class="step panel" data-step="4" hidden>
+      <h2>Verified Attachments</h2>
+      <p class="hint">Five PDFs. Use the exact file name shown beneath each row.</p>
+      <fieldset id="docs"></fieldset>
+    </section>
+
+    <section class="step panel" data-step="5" hidden>
+      <h2>Review &amp; Submit</h2>
+      <p class="hint">Check the entries below, then confirm and submit.</p>
+      <dl class="review" id="review"></dl>
+      <label class="check">
+        <input type="checkbox" id="f_declare" name="declaration" value="confirmed" required />
+        <span>I confirm the particulars above match the attached certificates for the Oman entity, and that any change will be notified within 30 days.</span>
+      </label>
+      <span class="err" data-for="f_declare"></span>
+    </section>
+
+    <div class="nav">
+      <button type="button" class="btn ghost" id="back" hidden>← Back</button>
+      <button type="button" class="btn primary" id="next">Continue →</button>
+      <button type="submit" class="btn primary" id="submit" hidden>Submit registration</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  var DOCS = [
+    { name: 'bank_iban_certificate',             label: 'Bank IBAN Certificate',              file: 'Bank IBAN Certificate.pdf' },
+    { name: 'commercial_registration_certificate', label: 'Commercial Registration Certificate', file: 'Commercial Registration Certificate.pdf' },
+    { name: 'financial_statement',               label: 'Financial Statement',                file: 'Financial Statement.pdf' },
+    { name: 'previous_approved_projects',        label: 'Previous Approved Projects',         file: 'Previous Approved Projects.pdf' },
+    { name: 'tax_certificate',                   label: 'Tax Certificate',                    file: 'Tax Certificate.pdf' }
+  ];
+
+  var docs = document.getElementById('docs');
+  DOCS.forEach(function (d, i) {
+    var row = document.createElement('div');
+    row.className = 'doc';
+    row.setAttribute('data-filled', 'no');
+    row.innerHTML =
+      '<div class="meta"><div class="name">' + d.label + '</div>' +
+      '<div class="want">Expected: ' + d.file + '</div></div>' +
+      '<input type="file" accept="application/pdf,.pdf" id="doc_' + i + '" name="' + d.name +
+      '" data-expected-filename="' + d.file + '" aria-label="' + d.label + '" />';
+    docs.appendChild(row);
+    row.querySelector('input').addEventListener('change', function (e) {
+      row.setAttribute('data-filled', e.target.files.length ? 'yes' : 'no');
+    });
+  });
+
+  var steps = [].slice.call(document.querySelectorAll('.step'));
+  var titles = ['Identity', 'Tax & Banking', 'Financials', 'Attachments', 'Review'];
+  var cur = 0;
+  var stepper = document.getElementById('stepper');
+  var bar = document.getElementById('bar');
+  var back = document.getElementById('back');
+  var next = document.getElementById('next');
+  var submit = document.getElementById('submit');
+
+  titles.forEach(function (t, i) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = '<span class="n">' + (i + 1) + '</span><span>' + t + '</span>';
+    b.addEventListener('click', function () { if (i < cur) show(i); });
+    stepper.appendChild(b);
+  });
+
+  function show(i) {
+    cur = i;
+    steps.forEach(function (s, n) { s.hidden = n !== i; });
+    [].slice.call(stepper.children).forEach(function (b, n) {
+      if (n === i) { b.setAttribute('aria-current', 'step'); } else { b.removeAttribute('aria-current'); }
+      b.setAttribute('data-done', n < i ? 'yes' : 'no');
+    });
+    bar.style.width = ((i + 1) / steps.length * 100) + '%';
+    back.hidden = i === 0;
+    next.hidden = i === steps.length - 1;
+    submit.hidden = i !== steps.length - 1;
+    if (i === steps.length - 1) buildReview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function validate(i) {
+    var ok = true;
+    steps[i].querySelectorAll('[required]').forEach(function (el) {
+      var slot = steps[i].querySelector('.err[data-for="' + el.id + '"]');
+      var bad = el.type === 'checkbox' ? !el.checked : !el.value.trim();
+      if (slot) slot.textContent = bad ? 'This field is required.' : '';
+      if (bad && ok) { el.focus(); ok = false; }
+    });
+    return ok;
+  }
+
+  function buildReview() {
+    var dl = document.getElementById('review');
+    dl.innerHTML = '';
+    document.querySelectorAll('#form input:not([type=file]):not([type=checkbox]), #form select, #form textarea').forEach(function (el) {
+      var lab = document.querySelector('label[for="' + el.id + '"]');
+      if (!lab) return;
+      var row = document.createElement('div');
+      row.innerHTML = '<dt>' + lab.textContent.replace('*', '').trim() + '</dt><dd>' +
+        (el.value.trim() ? el.value.replace(/[<>&]/g, '') : '—') + '</dd>';
+      dl.appendChild(row);
+    });
+    DOCS.forEach(function (d, i) {
+      var f = document.getElementById('doc_' + i);
+      var row = document.createElement('div');
+      row.innerHTML = '<dt>' + d.label + '</dt><dd>' +
+        (f.files.length ? f.files[0].name.replace(/[<>&]/g, '') : 'not attached') + '</dd>';
+      dl.appendChild(row);
+    });
+  }
+
+  next.addEventListener('click', function () { if (validate(cur)) show(cur + 1); });
+  back.addEventListener('click', function () { show(cur - 1); });
+  document.getElementById('form').addEventListener('submit', function (e) {
+    if (!validate(steps.length - 1)) e.preventDefault();
+  });
+
+  show(0);
+})();
+</script>
+</body>
+</html>
