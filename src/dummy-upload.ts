@@ -154,6 +154,8 @@ const GLOBAL_FORM_FILE = 'vendor-registration-sedar-global.html';
 const GLOBAL_FORM_PATH = '/dummy/vendor-registration/abudhabi-sedar-global';
 const OMAN_FORM_FILE = 'vendor-registration-oman.html';
 const OMAN_FORM_PATH = '/dummy/vendor-registration/oman';
+const KSA_DECOR_FORM_FILE = 'vendor-registration-ksa-decor.html';
+const KSA_DECOR_FORM_PATH = '/dummy/vendor-registration/ksa-decor-factory';
 const publicFile = (name: string): string => {
   const cwdPublic = join(process.cwd(), 'public', name);
   return existsSync(cwdPublic)
@@ -163,6 +165,7 @@ const publicFile = (name: string): string => {
 const uaeFormPath = publicFile(UAE_FORM_FILE);
 const globalFormPath = publicFile(GLOBAL_FORM_FILE);
 const omanFormPath = publicFile(OMAN_FORM_FILE);
+const ksaDecorFormPath = publicFile(KSA_DECOR_FORM_FILE);
 
 export interface StoredFile {
   field: string;
@@ -580,7 +583,7 @@ function renderTemplatePicker(): string {
         <h2>Company presets</h2>
         <p>${esc(copy.pickerLead)}</p>
       </div>
-      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 6}</strong><small class="muted">10 pages each</small></div>
+      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 7}</strong><small class="muted">10 pages each</small></div>
     </aside>`,
     `<section class="card">
       <div class="hero">
@@ -620,6 +623,12 @@ function renderTemplatePicker(): string {
           <small>Oman · single page · 5 steps · 5 required documents</small>
           <p class="muted">Entirely separate UI: one page with a five-step wizard, client-side step validation and a review screen before submit.</p>
           <a href="/dummy/vendor-registration/oman"><button type="button" style="margin-top:.8rem">Open Oman form</button></a>
+        </div>
+        <div class="doc-card" style="border-color:var(--accent)">
+          <strong>Sedar Decor Factory quality registration</strong>
+          <small>KSA · single page · 5 steps · 5 required documents</small>
+          <p class="muted">Light editorial UI with a vertical rail stepper: ISO 9001 accreditation, key personnel, project record and engagement details.</p>
+          <a href="/dummy/vendor-registration/ksa-decor-factory"><button type="button" style="margin-top:.8rem">Open Sedar Decor form</button></a>
         </div>
         ${COMPANY_TEMPLATES.map((template) => `<form method="post" action="/dummy/vendor-registration/start" class="doc-card">
           <input type="hidden" name="template" value="${esc(template.key)}">
@@ -689,7 +698,7 @@ function renderLogin(error = '', returnTo = '/dummy/vendor-registration'): strin
 
 function safeLoginReturnTo(value: unknown): string {
   const requested = typeof value === 'string' ? value : '';
-  if (requested === UAE_FORM_PATH || requested === GLOBAL_FORM_PATH || requested === OMAN_FORM_PATH) return requested;
+  if (requested === UAE_FORM_PATH || requested === GLOBAL_FORM_PATH || requested === OMAN_FORM_PATH || requested === KSA_DECOR_FORM_PATH) return requested;
   return /^\/dummy\/vendor-registration\/[0-9a-f-]+\/page\/(?:1|3)$/.test(requested)
     ? requested
     : '/dummy/vendor-registration';
@@ -1252,6 +1261,25 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
     if (session) sessions.delete(session);
     res.setHeader('Set-Cookie', 'dummy_session=; HttpOnly; SameSite=Lax; Path=/dummy; Max-Age=0');
     res.redirect(303, '/dummy/vendor-registration');
+  });
+
+  router.get('/vendor-registration/ksa-decor-factory', (req, res, next) => {
+    if (!isLoggedIn(req)) {
+      res.type('html').send(renderLogin('', KSA_DECOR_FORM_PATH));
+      return;
+    }
+    readFile(ksaDecorFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+  });
+
+  router.post('/vendor-registration/ksa-decor-factory', (_req, res) => {
+    res.type('html').send(renderLayout(
+      'Registration received',
+      'form',
+      '<aside class="aside"></aside>',
+      `<section class="card"><h2>Registration received</h2>
+        <p class="muted">Sedar Decor Factory Company &middot; KSA. Nothing left this machine &mdash; the dummy portal accepted the post and discarded it.</p>
+        <p><a href="/dummy/vendor-registration">Back to the flow picker</a></p></section>`,
+    ));
   });
 
   router.get('/vendor-registration/oman', (req, res, next) => {
