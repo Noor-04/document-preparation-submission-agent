@@ -8,7 +8,7 @@
  */
 import { Router, type Request, type Response, urlencoded } from 'express';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { Readable } from 'node:stream';
@@ -114,6 +114,29 @@ const WIZARD_PAGES = [
   'Review and declaration',
   'Acknowledgement',
 ] as const;
+
+/**
+ * What ONE REQUEST may weigh — a transport bound, never a document or package
+ * limit. A file of any size arrives as a sequence of chunks under it.
+ *
+ * Pages 7 and 8 used to post a whole BATCH in one multipart body. On a
+ * serverless deployment that body is rejected by the platform before the
+ * handler runs — no 400, no error list, just an error page under the wizard's
+ * own URL. That per-request limit belongs to the host and is immutable;
+ * chunking is how a large document crosses it rather than arguing with it.
+ *
+ * ponytail: one fixed bound below the platform's documented 4.5 MB. Read it
+ * from the deployment if that ever becomes queryable.
+ *
+ * KNOWN CEILING OF THIS DESIGN: the `.part` file is local to whichever
+ * serverless instance answered. Chunks of one document must therefore reach
+ * the same instance, which a single dev host guarantees and a scaled
+ * deployment does not. Reliable large uploads on a real serverless host need
+ * durable direct object storage (a signed upload straight to a bucket, with
+ * the portal keeping only the ref) — that is the upgrade path, not more
+ * chunking.
+ */
+const MAX_REQUEST_BYTES = 3_500_000;
 
 const COUNTRIES = ['AE', 'SA', 'GB', 'NL', 'DE', 'US'];
 const ENTITY_TYPES = ['llc', 'sole_establishment', 'branch', 'partnership'];
@@ -407,6 +430,16 @@ function validateFile(field: string, file: File, errors: string[]): boolean {
   return true;
 }
 
+/**
+ * A multipart entry that carries a file, without touching the global `File` —
+ * which does not exist before Node 20, so `instanceof File` threw
+ * `File is not defined` on a runtime this ships to. Same duck test the quick
+ * lane already used; it holds on every runtime.
+ */
+function isUpload(value: FormDataEntryValue | null): value is File {
+  return Boolean(value && typeof value === 'object' && 'name' in value && 'arrayBuffer' in value);
+}
+
 async function readMultipart(req: Request): Promise<FormData> {
   const contentType = req.header('content-type') ?? '';
   if (!contentType.toLowerCase().startsWith('multipart/form-data')) {
@@ -658,6 +691,128 @@ function pageActions(state: WizardState, page: number, opts: { multipart?: boole
   </div>`;
 }
 
+/**
+ * Each file uploads on its own the moment it is chosen, and the input's `name`
+ * is dropped once it lands, so the page POST carries metadata only.
+ *
+ * The submit is HELD until every started upload has resolved: the extension
+ * dispatches `change` and can click Save in the same tick, and without the
+ * hold that Save posts the old oversized batch or navigates mid-save. A failed
+ * upload marks the page blocked and lets no submit through at all.
+ *
+ * No bytes are altered, and with JavaScript off the inputs keep their names so
+ * the original batch POST still works.
+ */
+function perFileUploadScript(draftId: string, page: number): string {
+  const base = `/dummy/vendor-registration/${esc(draftId)}/page/${page}/upload/`;
+  return `<script>
+(function () {
+  var base = ${JSON.stringify(base)};
+  // Well under the platform's request-body limit, so a document of ANY size
+  // and a package of ANY size cross it as a sequence of small requests.
+  var CHUNK_BYTES = ${MAX_REQUEST_BYTES / 2};
+  var form = document.querySelector('form[action$="/page/${page}"]');
+  if (!form) return;
+  // ONE REQUEST AT A TIME, in selection order. Every request reads and rewrites
+  // the same draft JSON, so two in flight can each save one document and the
+  // later write silently drops the earlier one.
+  var queue = Promise.resolve();
+  var inFlight = 0;
+  // Per KEY, so a retry replaces its own failure instead of a counter nobody
+  // can clear.
+  var failures = {};
+  var submitting = false;
+  var status = document.createElement('p');
+  status.id = 'd14-upload-status';
+  status.className = 'muted';
+  status.setAttribute('data-d14-upload-state', 'idle');
+  form.appendChild(status);
+
+  function state(next, text) {
+    status.setAttribute('data-d14-upload-state', next);
+    status.textContent = text;
+  }
+
+  function stillFailing() {
+    for (var key in failures) {
+      if (failures[key]) return true;
+    }
+    return false;
+  }
+
+  document.querySelectorAll('input[type="file"][name^="doc_file_"]').forEach(function (input) {
+    var key = input.name.slice('doc_file_'.length);
+    var note = document.createElement('p');
+    note.className = 'muted';
+    input.parentNode.appendChild(note);
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      if (!file) return;
+      note.textContent = 'Queued ' + file.name + '...';
+      state('uploading', 'Uploading documents...');
+      inFlight += 1;
+      queue = queue.then(function () {
+        note.textContent = 'Uploading ' + file.name + '...';
+        // One bounded chunk per request, in order: a document of any size
+        // crosses a platform request limit this way, and slice copies the
+        // file's own bytes rather than transforming them.
+        function sendFrom(at) {
+          var end = Math.min(at + CHUNK_BYTES, file.size);
+          var body = new FormData();
+          body.append('offset', String(at));
+          body.append('total', String(file.size));
+          body.append('doc_file_' + key, file.slice(at, end), file.name);
+          return fetch(base + encodeURIComponent(key), { method: 'POST', body: body, credentials: 'same-origin' })
+            .then(function (response) { return response.json().then(function (json) { return json; }); })
+            .then(function (json) {
+              if (!json || !json.ok) {
+                failures[key] = true;
+                note.textContent = ((json && json.errors) || ['upload failed']).join(' ');
+                return;
+              }
+              if (json.stored_as) {
+                // The last chunk landed and the document is recorded.
+                failures[key] = false;
+                input.setAttribute('data-d14-uploaded', 'true');
+                input.removeAttribute('name');
+                note.textContent = 'Uploaded ' + json.original_name + ' (' + json.size + ' bytes).';
+                return;
+              }
+              note.textContent = 'Uploading ' + file.name + ' (' + json.received + ' of ' + json.total + ')...';
+              return sendFrom(json.received);
+            });
+        }
+        return sendFrom(0)
+          .catch(function () {
+            failures[key] = true;
+            note.textContent = 'Upload failed: the portal did not answer.';
+          })
+          .then(function () { inFlight -= 1; });
+      });
+    });
+  });
+
+  form.addEventListener('submit', function (event) {
+    // Already waited and cleared: let this one through rather than recursing.
+    if (submitting) return;
+    if (inFlight === 0 && !stillFailing()) return;
+    event.preventDefault();
+    queue.then(function () {
+      if (inFlight > 0) return;
+      if (stillFailing()) {
+        // Blocked, and visibly so: nothing is posted and nothing navigates.
+        state('failed', 'An upload failed. Nothing was submitted - retry that document.');
+        return;
+      }
+      state('ready', 'All documents uploaded.');
+      submitting = true;
+      form.submit();
+    });
+  });
+})();
+</script>`;
+}
+
 function docFields(state: WizardState, keys: string[], page: number): string {
   if (keys.length === 0) {
     return `<div class="file-box"><h3>No documents in this batch</h3><p class="muted">Nothing selected for page ${page}. Continue to the next page.</p></div>`;
@@ -844,6 +999,7 @@ function renderPage(state: WizardState, page: number, errors: string[]): string 
           ${docFields(state, batch, page)}
           ${pageActions(state, page, { multipart: true })}
         </form>
+        ${perFileUploadScript(state.id, page)}
       </section>`);
   }
 
@@ -881,6 +1037,70 @@ function renderPage(state: WizardState, page: number, errors: string[]): string 
         <div class="actions"><div class="left"><a href="/dummy/receipt/${esc(state.id)}?format=json"><button type="button" class="secondary">View JSON receipt</button></a></div><div class="right"><a href="/dummy/vendor-registration"><button type="button">Start another application</button></a></div></div>
       </section>`,
   );
+}
+
+/**
+ * The partial upload on disk. `.part` lives beside the finished files and is
+ * removed the moment the document is stored or refused, so a interrupted
+ * upload leaves no half-file anyone could mistake for a document.
+ */
+async function partSize(path: string): Promise<number> {
+  try {
+    return (await stat(path)).size;
+  } catch {
+    return 0;
+  }
+}
+
+async function appendChunk(path: string, bytes: Buffer, first: boolean): Promise<void> {
+  if (first) await writeFile(path, bytes);
+  else await appendFile(path, bytes);
+}
+
+async function readPart(path: string): Promise<Buffer> {
+  return await readFile(path);
+}
+
+async function discardPart(path: string): Promise<void> {
+  await rm(path, { force: true });
+  await rm(`${path}.json`, { force: true });
+}
+
+/**
+ * THE FIRST CHUNK DECIDES WHAT THIS DOCUMENT IS.
+ *
+ * Without this the name, media type and declared total came from whichever
+ * chunk happened to be in hand, so a later request could rename the file or
+ * restate its length — weaker than the one-request contract it replaced. The
+ * first chunk's values are written beside the part and every later chunk is
+ * compared to them.
+ */
+type PartMeta = { name: string; type: string; total: number };
+
+async function writePartMeta(path: string, meta: PartMeta): Promise<void> {
+  await writeFile(`${path}.json`, JSON.stringify(meta));
+}
+
+async function readPartMeta(path: string): Promise<PartMeta | null> {
+  try {
+    return JSON.parse(await readFile(`${path}.json`, 'utf8')) as PartMeta;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The reassembled document as the rest of this file expects a `File`: same
+ * duck test `isUpload` uses, so no global `File` is touched on Node 18. The
+ * bytes are the concatenated chunks, unaltered.
+ */
+function fileLike(name: string, type: string, bytes: Buffer): File {
+  return {
+    name,
+    type,
+    size: bytes.byteLength,
+    arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+  } as unknown as File;
 }
 
 async function storeFiles(dir: string, field: string, files: File[], startIndex: number): Promise<StoredFile[]> {
@@ -998,7 +1218,6 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
     if (!isLoggedIn(req)) { res.redirect(303, '/dummy/vendor-registration'); return; }
     void (async () => {
       const form = await readMultipart(req);
-      const isUpload = (value: FormDataEntryValue | null): value is File => Boolean(value && typeof value === 'object' && 'name' in value && 'arrayBuffer' in value);
       const text = (key: string): string => String(form.get(key) ?? '').trim();
       const values = Object.fromEntries(['contact_email', 'entity_type', 'company_name', 'country'].map((key) => [key, text(key)]));
       const fileKeys = ['cr_copy', 'vat_certificate', 'bank_iban', 'national_address'];
@@ -1068,6 +1287,159 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
         return;
       }
       res.type('html').send(renderPage(state, page, []));
+    })().catch(next);
+  });
+
+  /**
+   * ONE FILE, ONE BOUNDED REQUEST. The whole point of this route: a body the
+   * platform will actually deliver. Returns a small JSON ref; the bytes and
+   * their name are stored exactly as the batch path stores them, so the hash
+   * of what lands on disk is the hash of what was sent.
+   */
+  router.post('/vendor-registration/:id/page/:page/upload/:key', (req, res, next) => {
+    void (async () => {
+      const page = Number(req.params.page);
+      const key = String(req.params.key ?? '');
+      if (!Number.isInteger(page) || (page !== 7 && page !== 8)) {
+        res.status(404).json({ ok: false, errors: ['no such upload page'] });
+        return;
+      }
+      if (!isLoggedIn(req)) {
+        res.status(401).json({ ok: false, errors: ['not signed in'] });
+        return;
+      }
+      const state = await readDraft(String(req.params.id ?? ''));
+      if (!state) {
+        res.status(404).json({ ok: false, errors: ['no such registration'] });
+        return;
+      }
+      const [batch1, batch2] = splitDocs(state.selected_documents);
+      const batch = page === 7 ? batch1 : batch2;
+      // Only a document THIS page is responsible for, and only one it selected.
+      if (!batch.includes(key)) {
+        res.status(400).json({ ok: false, errors: ['that document is not on this page'] });
+        return;
+      }
+      const def = DOCS_BY_KEY.get(key);
+      if (!def) {
+        res.status(400).json({ ok: false, errors: ['unknown document'] });
+        return;
+      }
+      // REFUSED BEFORE IT IS READ, and only ever about ONE CHUNK. The declared
+      // length is enough to answer, and answering is the difference between a
+      // 413 with a reason and a dead page.
+      const declared = Number(req.header('content-length') ?? '0');
+      if (Number.isFinite(declared) && declared > MAX_REQUEST_BYTES) {
+        res.status(413).json({
+          ok: false,
+          errors: [`a chunk may not exceed ${MAX_REQUEST_BYTES} bytes`],
+          limit: MAX_REQUEST_BYTES,
+        });
+        return;
+      }
+      let form: FormData;
+      try {
+        form = await readMultipart(req);
+      } catch (err) {
+        res.status(400).json({ ok: false, errors: [`could not parse the upload: ${(err as Error).message}`] });
+        return;
+      }
+      // EXACTLY ONE FILE PART. A batch smuggled into this route is the thing
+      // this route exists to prevent.
+      const uploads = [...form.values()].filter((value) => isUpload(value));
+      if (uploads.length !== 1) {
+        res.status(400).json({ ok: false, errors: ['send exactly one file per request'] });
+        return;
+      }
+      const upload = form.get(`doc_file_${key}`);
+      if (!isUpload(upload) || !upload.name) {
+        res.status(400).json({ ok: false, errors: [`expected a file named doc_file_${key}`] });
+        return;
+      }
+      if (upload.size > MAX_REQUEST_BYTES) {
+        res.status(413).json({
+          ok: false,
+          errors: [`a chunk may not exceed ${MAX_REQUEST_BYTES} bytes`],
+          limit: MAX_REQUEST_BYTES,
+        });
+        return;
+      }
+      /**
+       * ONE BOUNDED CHUNK PER REQUEST, APPENDED IN ORDER.
+       *
+       * This is what removes every DOCUMENT and PACKAGE size ceiling: a file of
+       * any size arrives as a sequence of requests, none of which exceeds the
+       * platform's own immutable per-request body limit. `offset` says where
+       * this chunk belongs and `total` the document's whole length. Anything
+       * that does not continue exactly where the last chunk ended, or would
+       * carry the file past its declared length, is refused BEFORE a byte is
+       * written. Omitting both is the single-chunk case.
+       */
+      const part = (name: string) => String(form.get(name) ?? '').trim();
+      const total = Number(part('total') || String(upload.size));
+      const at = Number(part('offset') || '0');
+      if (!Number.isInteger(total) || total < 0 || !Number.isInteger(at) || at < 0 || at > total) {
+        res.status(400).json({ ok: false, errors: ['malformed chunk offset'] });
+        return;
+      }
+      const dir = draftDir(state.id);
+      await mkdir(dir, { recursive: true });
+      const partPath = join(dir, `${key}.part`);
+      const held = at === 0 ? 0 : await partSize(partPath);
+      if (held !== at) {
+        res.status(409).json({ ok: false, errors: ['chunk out of order'], expected_offset: held });
+        return;
+      }
+      // The first chunk binds what this document IS; a later one may not
+      // rename it, restate its type, or change how long it claims to be.
+      const bound = at === 0 ? null : await readPartMeta(partPath);
+      if (at > 0) {
+        if (!bound || bound.total !== total || bound.name !== upload.name || bound.type !== upload.type) {
+          res.status(409).json({ ok: false, errors: ['chunk does not match the document it continues'] });
+          return;
+        }
+      }
+      const bytes = Buffer.from(await upload.arrayBuffer());
+      // REFUSED BEFORE THE APPEND, so an overflowing chunk leaves no partial
+      // write behind and can never be mistaken for a complete document.
+      if (at + bytes.byteLength > total) {
+        res.status(400).json({ ok: false, errors: ['chunk runs past the declared total'] });
+        return;
+      }
+      if (at === 0) await writePartMeta(partPath, { name: upload.name, type: upload.type, total });
+      await appendChunk(partPath, bytes, at === 0);
+      const written = at + bytes.byteLength;
+      if (written < total) {
+        // More to come: no document is recorded until the last byte lands.
+        res.json({ ok: true, key, received: written, total });
+        return;
+      }
+
+      // COMPLETE. Only now is the document validated and recorded, so a
+      // half-arrived file is never mistaken for an uploaded one. The name and
+      // type are the FIRST chunk's, never this request's.
+      const assembled = await readPart(partPath);
+      const identity = (await readPartMeta(partPath)) ?? { name: upload.name, type: upload.type, total };
+      const whole = fileLike(identity.name, identity.type, assembled);
+      const uploadErrors: string[] = [];
+      const valid = validateFile(def.name, whole, uploadErrors);
+      if (def.upload_only && extensionOf(identity.name) !== 'pdf') {
+        uploadErrors.push(`${def.name}: upload-only documents must be PDF files`);
+      }
+      if (!valid || uploadErrors.length > 0) {
+        await discardPart(partPath);
+        res.status(400).json({ ok: false, errors: uploadErrors });
+        return;
+      }
+      const offset = Object.values(state.documents).filter((doc) => doc.file).length;
+      const [stored] = await storeFiles(dir, key, [whole], offset);
+      await discardPart(partPath);
+      const current = state.documents[key] ?? { number: '', issue_date: '', expiry_date: '', issuing_authority: '', notes: '' };
+      current.file = stored;
+      state.documents[key] = current;
+      await saveDraft(state);
+      // A SMALL REF, which is all the form then has to carry.
+      res.json({ ok: true, key, stored_as: stored!.stored_as, size: stored!.size, original_name: stored!.original_name });
     })().catch(next);
   });
 
@@ -1214,7 +1586,7 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
             current.notes = String(form.get(`doc_notes_${key}`) ?? '').trim();
           }
           const upload = form.get(`doc_file_${key}`);
-          if (upload instanceof File && upload.name) {
+          if (isUpload(upload) && upload.name) {
             const uploadErrors: string[] = [];
             const valid = validateFile(def.name, upload, uploadErrors);
             if (def.upload_only && extensionOf(upload.name) !== 'pdf') {
