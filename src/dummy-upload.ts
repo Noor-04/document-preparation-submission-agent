@@ -149,12 +149,17 @@ const SEDAR_DRAFT_ID = '310d0528-da0e-4bb8-800b-84486e0dc7df';
 // Static copy of the UAE / Abu Dhabi Jotform vendor form, served under /dummy
 // so its URL matches the other registration flows.
 const UAE_FORM_FILE = 'vendor-registration-form.html';
-const uaeFormPath = (() => {
-  const cwdPublic = join(process.cwd(), 'public', UAE_FORM_FILE);
+export const UAE_FORM_PATH = '/dummy/vendor-registration/uae-abu-dhabi';
+const GLOBAL_FORM_FILE = 'vendor-registration-sedar-global.html';
+const GLOBAL_FORM_PATH = '/dummy/vendor-registration/abudhabi-sedar-global';
+const publicFile = (name: string): string => {
+  const cwdPublic = join(process.cwd(), 'public', name);
   return existsSync(cwdPublic)
     ? cwdPublic
-    : join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'public', UAE_FORM_FILE);
-})();
+    : join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'public', name);
+};
+const uaeFormPath = publicFile(UAE_FORM_FILE);
+const globalFormPath = publicFile(GLOBAL_FORM_FILE);
 
 export interface StoredFile {
   field: string;
@@ -572,7 +577,7 @@ function renderTemplatePicker(): string {
         <h2>Company presets</h2>
         <p>${esc(copy.pickerLead)}</p>
       </div>
-      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 4}</strong><small class="muted">10 pages each</small></div>
+      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 5}</strong><small class="muted">10 pages each</small></div>
     </aside>`,
     `<section class="card">
       <div class="hero">
@@ -600,6 +605,12 @@ function renderTemplatePicker(): string {
           <small>UAE · Abu Dhabi · LLC · 5 required documents</small>
           <p class="muted">Single-page UAE form for Sedar Emirates Company LLC with Trade License, VAT, Bank Details, ICV and Supplier Authorisation attachments.</p>
           <a href="/dummy/vendor-registration/uae-abu-dhabi"><button type="button" style="margin-top:.8rem">Open Sedar Emirates form</button></a>
+        </div>
+        <div class="doc-card" style="border-color:var(--accent)">
+          <strong>Sedar Global LTD vendor registration</strong>
+          <small>UAE · Abu Dhabi · LTD · 5 required documents</small>
+          <p class="muted">Different layout and renamed fields: registration reference, establishment code, taxpayer identifier, warranty and financial reporting periods.</p>
+          <a href="/dummy/vendor-registration/abudhabi-sedar-global"><button type="button" style="margin-top:.8rem">Open Sedar Global form</button></a>
         </div>
         ${COMPANY_TEMPLATES.map((template) => `<form method="post" action="/dummy/vendor-registration/start" class="doc-card">
           <input type="hidden" name="template" value="${esc(template.key)}">
@@ -665,6 +676,14 @@ function renderLogin(error = '', returnTo = '/dummy/vendor-registration'): strin
       </form>
     </section>`,
   );
+}
+
+function safeLoginReturnTo(value: unknown): string {
+  const requested = typeof value === 'string' ? value : '';
+  if (requested === UAE_FORM_PATH || requested === GLOBAL_FORM_PATH) return requested;
+  return /^\/dummy\/vendor-registration\/[0-9a-f-]+\/page\/(?:1|3)$/.test(requested)
+    ? requested
+    : '/dummy/vendor-registration';
 }
 
 function renderAside(state: WizardState, page: number): string {
@@ -1212,11 +1231,10 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
     const session = randomUUID();
     sessions.add(session);
     res.setHeader('Set-Cookie', `dummy_session=${session}; HttpOnly; SameSite=Lax; Path=/dummy`);
-    const requested = inputValue(req.body as Record<string, unknown>, 'return_to');
-    const returnTo = /^\/dummy\/vendor-registration\/[0-9a-f-]+\/page\/(?:1|3)$/.test(requested)
-      ? requested
-      : '/dummy/vendor-registration';
-    res.redirect(303, returnTo);
+    res.redirect(
+      303,
+      safeLoginReturnTo(inputValue(req.body as Record<string, unknown>, 'return_to')),
+    );
   });
 
   router.post('/vendor-registration/logout', (req, res) => {
@@ -1227,9 +1245,28 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
     res.redirect(303, '/dummy/vendor-registration');
   });
 
+  router.get('/vendor-registration/abudhabi-sedar-global', (req, res, next) => {
+    if (!isLoggedIn(req)) {
+      res.type('html').send(renderLogin('', GLOBAL_FORM_PATH));
+      return;
+    }
+    readFile(globalFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+  });
+
+  router.post('/vendor-registration/abudhabi-sedar-global', (_req, res) => {
+    res.type('html').send(renderLayout(
+      'Registration received',
+      'form',
+      '<aside class="aside"></aside>',
+      `<section class="card"><h2>Registration received</h2>
+        <p class="muted">AbuDhabi_Sedar Global LTD. Nothing left this machine &mdash; the dummy portal accepted the post and discarded it.</p>
+        <p><a href="/dummy/vendor-registration">Back to the flow picker</a></p></section>`,
+    ));
+  });
+
   router.get('/vendor-registration/uae-abu-dhabi', (req, res, next) => {
     if (!isLoggedIn(req)) {
-      res.type('html').send(renderLogin());
+      res.type('html').send(renderLogin('', UAE_FORM_PATH));
       return;
     }
     readFile(uaeFormPath, 'utf8').then((html) => res.type('html').send(html), next);

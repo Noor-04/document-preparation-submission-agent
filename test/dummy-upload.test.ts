@@ -472,6 +472,40 @@ test('the dummy pages stay off in production unless switched on', async () => {
   }
 });
 
+test('Abu Dhabi login returns to the exact reviewed form and nowhere else', async () => {
+  await withPages(async ({ base, get, postForm }) => {
+    const path = '/dummy/vendor-registration/uae-abu-dhabi';
+    const legacy = await get('/vendor-registration-form.html');
+    assert.equal(legacy.status, 303);
+    assert.equal(legacy.headers.get('location'), path);
+    const page = await get(path);
+    assert.equal(page.status, 200);
+    assert.match(await page.text(), /name="return_to" value="\/dummy\/vendor-registration\/uae-abu-dhabi"/);
+
+    const login = await postForm('/dummy/vendor-registration/login', new URLSearchParams({
+      username: 'admin',
+      password: 'admin',
+      return_to: path,
+    }));
+    assert.equal(login.status, 303);
+    assert.equal(login.headers.get('location'), path);
+    const cookie = login.headers.get('set-cookie')?.split(';', 1)[0];
+    assert.ok(cookie);
+    const returned = await fetch(base + path, { headers: { cookie } });
+    assert.equal(returned.status, 200);
+    assert.match(await returned.text(), /name="q6_organizationbusinessName"/);
+
+    for (const unsafe of ['//evil.example', 'https://evil.example', `${path}/extra`]) {
+      const refused = await postForm('/dummy/vendor-registration/login', new URLSearchParams({
+        username: 'admin',
+        password: 'admin',
+        return_to: unsafe,
+      }));
+      assert.equal(refused.headers.get('location'), '/dummy/vendor-registration');
+    }
+  });
+});
+
 /**
  * Page 7 answered `File is not defined` on the runtime the rig actually runs
  * (Node 18 has no global `File`). Uploads are appended as Blobs on purpose:
