@@ -274,7 +274,7 @@ JotForm.paymentExtrasOnTheFly([null,null,{"name":"submitForm","qid":"2","text":"
 </script>
 </head>
 <body>
-<form class="jotform-form" onsubmit="return typeof testSubmitFunction !== 'undefined' && testSubmitFunction();" action="https://submit.jotform.com/submit/262382105410445" method="post" name="form_262382105410445" id="262382105410445" accept-charset="utf-8" autocomplete="on"><input type="hidden" name="formID" value="262382105410445" /><input type="hidden" id="JWTContainer" value="" /><input type="hidden" id="cardinalOrderNumber" value="" /><input type="hidden" id="jsExecutionTracker" name="jsExecutionTracker" value="build-date-1787822408588" /><input type="hidden" id="submitSource" name="submitSource" value="unknown" /><input type="hidden" id="submitDate" name="submitDate" value="undefined" /><input type="hidden" id="buildDate" name="buildDate" value="1787822408588" /><input type="hidden" name="uploadServerUrl" value="https://upload.jotform.com/upload" /><input type="hidden" name="eventObserver" value="1" />
+<form class="jotform-form" onsubmit="return typeof testSubmitFunction !== 'undefined' && testSubmitFunction();" action="https://submit.jotform.com/submit/262382105410445" method="post" enctype="multipart/form-data" name="form_262382105410445" id="262382105410445" accept-charset="utf-8" autocomplete="on"><input type="hidden" name="formID" value="262382105410445" /><input type="hidden" id="JWTContainer" value="" /><input type="hidden" id="cardinalOrderNumber" value="" /><input type="hidden" id="jsExecutionTracker" name="jsExecutionTracker" value="build-date-1787822408588" /><input type="hidden" id="submitSource" name="submitSource" value="unknown" /><input type="hidden" id="submitDate" name="submitDate" value="undefined" /><input type="hidden" id="buildDate" name="buildDate" value="1787822408588" /><input type="hidden" name="uploadServerUrl" value="https://upload.jotform.com/upload" /><input type="hidden" name="eventObserver" value="1" />
   <div role="main" class="form-all">
     <ul class="form-section page-section" role="presentation">
       <li id="cid_16" class="form-input-wide" data-type="control_head">
@@ -627,10 +627,54 @@ JotForm.paymentExtrasOnTheFly([null,null,{"name":"submitForm","qid":"2","text":"
       <li class="form-line" data-type="control_textbox" id="id_35"><label class="form-label form-label-top form-label-auto" id="label_35" for="input_35"> Account Number </label>
         <div id="cid_35" class="form-input-wide" data-layout="half"> <input type="text" id="input_35" name="q35_accountNumber" data-type="input-textbox" class="form-textbox" data-defaultvalue="" style="width:310px" size="310" data-component="textbox" aria-labelledby="label_35" value="" /> </div>
       </li>
+      <li id="cid_39" class="form-input-wide" data-type="control_head">
+        <div class="form-header-group header-default">
+          <div class="header-text httal htvam">
+            <h2 id="header_39" class="form-header" data-component="header">Required Attachments</h2>
+            <div id="subHeader_39" class="form-subHeader">UAE &ndash; Abu Dhabi: Sedar Emirates Company LLC. Attach each document as a PDF using the exact file name shown.</div>
+          </div>
+        </div>
+      </li>
+      <li class="form-line" data-type="control_fileupload" id="id_40"><label class="form-label form-label-top form-label-auto" id="label_40" for="input_40"> Trade License </label>
+        <div id="cid_40" class="form-input-wide" data-layout="full"> <input type="file" id="input_40" name="q40_tradeLicense" class="form-upload" accept="application/pdf,.pdf" data-component="fileupload" data-expected-filename="Trade License.pdf" aria-labelledby="label_40" aria-describedby="sublabel_40" />
+          <div class="form-sub-label-container" style="vertical-align:top"><label class="form-sub-label" id="sublabel_40" for="input_40" style="min-height:13px">Expected file: Trade License.pdf</label></div>
+        </div>
+      </li>
+      <li class="form-line" data-type="control_fileupload" id="id_41"><label class="form-label form-label-top form-label-auto" id="label_41" for="input_41"> VAT Certificate </label>
+        <div id="cid_41" class="form-input-wide" data-layout="full"> <input type="file" id="input_41" name="q41_vatCertificate" class="form-upload" accept="application/pdf,.pdf" data-component="fileupload" data-expected-filename="VAT Certificate.pdf" aria-labelledby="label_41" aria-describedby="sublabel_41" />
+          <div class="form-sub-label-container" style="vertical-align:top"><label class="form-sub-label" id="sublabel_41" for="input_41" style="min-height:13px">Expected file: VAT Certificate.pdf</label></div>
+        </div>
+      </li>
+      <li class="form-line" data-type="control_fileupload" id="id_42"><label class="form-label form-label-top form-label-auto" id="label_42" for="input_42"> Bank Details </label>
+        <div id="cid_42" class="form-input-wide" data-layout="full"> <input type="file" id="input_42" name="q42_bankDetails" class="form-upload" accept="application/pdf,.pdf" data-component="fileupload" data-expected-filename="Bank Details.pdf" aria-labelledby="label_42" aria-describedby="sublabel_42" />
+          <div class="form-sub-label-container" style="vertical-align:top"><label class="form-sub-label" id="sublabel_42" for="input_42" style="min-height:13px">Expected file: Bank Details.pdf</label></div>
+        </div>
+      </li>
+      <li class="form-line" data-type="control_fileupload" id="id_43"><label class="form-label form-label-top form-label-auto" id="label_43" for="input_43"> ICV Certificate </label>
+        <div id="cid_43" class="form-input-wide" data-layout="full"> <input type="file" id="input_43" name="q43_icvCertificate" class="form-upload" accept="application/pdf,.pdf" data-component="fileupload" data-expected-filename="ICV Certificate.pdf" aria-labelledby="label_43" aria-describedby="sublabel_43" />
+          <div class="form-sub-label-container" style="vertical-align:top"><label class="form-sub-label" id="sublabel_43" for="input_43" style="min-height:13px">Expected file: ICV Certificate.pdf</label></div>
+        </div>
+      </li>
+      <li class="form-line" data-type="control_fileupload" id="id_44"><label class="form-label form-label-top form-label-auto" id="label_44" for="input_44"> Supplier Authorisation Letter </label>
+        <div id="cid_44" class="form-input-wide" data-layout="full"> <input type="file" id="input_44" name="q44_supplierAuthorisation" class="form-upload" accept="application/pdf,.pdf" data-component="fileupload" data-expected-filename="Supplier Authorisation Letter.pdf" aria-labelledby="label_44" aria-describedby="sublabel_44" />
+          <div class="form-sub-label-container" style="vertical-align:top"><label class="form-sub-label" id="sublabel_44" for="input_44" style="min-height:13px">Expected file: Supplier Authorisation Letter.pdf</label></div>
+        </div>
+      </li>
       <li class="form-line" data-type="control_text" id="id_29">
         <div id="cid_29" class="form-input-wide" data-layout="full">
           <div id="text_29" class="form-html" data-component="text" tabindex="-1">
             <p>I hereby affirm that all information provided above is accurate to the best of my knowledge and belief, and I understand that this information will be considered material in the evaluation of quotations, bids and proposals.</p>
+          </div>
+        </div>
+      </li>
+      <li class="form-line jf-required" data-type="control_checkbox" id="id_31"><span class="form-label form-label-top form-label-auto" id="label_31"> Acknowledgement<span class="form-required" aria-hidden="true">*</span> </span>
+        <div id="cid_31" class="form-input-wide jf-required" data-layout="full">
+          <div class="form-multiple-column" data-columncount="1" role="group" aria-labelledby="label_31">
+            <span class="form-checkbox-item" style="clear:left">
+              <span class="dragger-children"></span>
+              <input type="checkbox" class="form-checkbox validate[required]" id="input_31_0" name="q31_acknowledgement[]" value="I agree to the statement above" required="" />
+              <label id="label_input_31_0" for="input_31_0"> I agree to the statement above </label>
+            </span>
           </div>
         </div>
       </li>
