@@ -8,9 +8,11 @@
  */
 import { Router, type Request, type Response, urlencoded } from 'express';
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { appendFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 
 export const MAX_SELECTED_DOCUMENTS = 16;
@@ -143,6 +145,16 @@ const ENTITY_TYPES = ['llc', 'sole_establishment', 'branch', 'partnership'];
 const SERVICE_CATEGORIES = ['it_services', 'logistics', 'consulting', 'facilities'];
 const REVENUE_BANDS = ['under_1m', '1m_to_5m', '5m_to_25m', '25m_plus'];
 const SEDAR_DRAFT_ID = '310d0528-da0e-4bb8-800b-84486e0dc7df';
+
+// Static copy of the UAE / Abu Dhabi Jotform vendor form, served under /dummy
+// so its URL matches the other registration flows.
+const UAE_FORM_FILE = 'vendor-registration-form.html';
+const uaeFormPath = (() => {
+  const cwdPublic = join(process.cwd(), 'public', UAE_FORM_FILE);
+  return existsSync(cwdPublic)
+    ? cwdPublic
+    : join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'public', UAE_FORM_FILE);
+})();
 
 export interface StoredFile {
   field: string;
@@ -560,7 +572,7 @@ function renderTemplatePicker(): string {
         <h2>Company presets</h2>
         <p>${esc(copy.pickerLead)}</p>
       </div>
-      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 3}</strong><small class="muted">10 pages each</small></div>
+      <div class="status"><small class="muted">Flows available</small><strong>${COMPANY_TEMPLATES.length + 4}</strong><small class="muted">10 pages each</small></div>
     </aside>`,
     `<section class="card">
       <div class="hero">
@@ -582,6 +594,12 @@ function renderTemplatePicker(): string {
           <small>Saudi Arabia · LLC · 4 required documents</small>
           <p class="muted">Use this preconfigured form for Sedar BI Group with CR, VAT, IBAN and National Address documents.</p>
           <a href="/dummy/vendor-registration/${SEDAR_DRAFT_ID}/page/1"><button type="button" style="margin-top:.8rem">Open Sedar BI Group form</button></a>
+        </div>
+        <div class="doc-card" style="border-color:var(--accent)">
+          <strong>Sedar Emirates vendor registration</strong>
+          <small>UAE · Abu Dhabi · LLC · 5 required documents</small>
+          <p class="muted">Single-page UAE form for Sedar Emirates Company LLC with Trade License, VAT, Bank Details, ICV and Supplier Authorisation attachments.</p>
+          <a href="/dummy/vendor-registration/uae-abu-dhabi"><button type="button" style="margin-top:.8rem">Open Sedar Emirates form</button></a>
         </div>
         ${COMPANY_TEMPLATES.map((template) => `<form method="post" action="/dummy/vendor-registration/start" class="doc-card">
           <input type="hidden" name="template" value="${esc(template.key)}">
@@ -1207,6 +1225,14 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
     if (session) sessions.delete(session);
     res.setHeader('Set-Cookie', 'dummy_session=; HttpOnly; SameSite=Lax; Path=/dummy; Max-Age=0');
     res.redirect(303, '/dummy/vendor-registration');
+  });
+
+  router.get('/vendor-registration/uae-abu-dhabi', (req, res, next) => {
+    if (!isLoggedIn(req)) {
+      res.type('html').send(renderLogin());
+      return;
+    }
+    readFile(uaeFormPath, 'utf8').then((html) => res.type('html').send(html), next);
   });
 
   router.get('/vendor-registration/quick', (req, res) => {
