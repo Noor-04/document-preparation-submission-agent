@@ -150,6 +150,8 @@ const SEDAR_DRAFT_ID = '310d0528-da0e-4bb8-800b-84486e0dc7df';
 // so its URL matches the other registration flows.
 const UAE_FORM_FILE = 'vendor-registration-form.html';
 export const UAE_FORM_PATH = '/dummy/vendor-registration/uae-abu-dhabi';
+const JOTFORM_SUBMIT_URL = 'https://submit.jotform.com/submit/262382105410445';
+const JOTFORM_UPLOAD_URL = 'https://upload.jotform.com/upload';
 const GLOBAL_FORM_FILE = 'vendor-registration-sedar-global.html';
 const GLOBAL_FORM_PATH = '/dummy/vendor-registration/abudhabi-sedar-global';
 const OMAN_FORM_FILE = 'vendor-registration-oman.html';
@@ -478,6 +480,64 @@ function isUpload(value: FormDataEntryValue | null): value is File {
   return Boolean(value && typeof value === 'object' && 'name' in value && 'arrayBuffer' in value);
 }
 
+/**
+ * NO FILE BYTES ARE POSTED BY THESE FORMS — only the chosen filename.
+ *
+ * Nothing here keeps a document: the single-page and static registration
+ * forms hand their body straight to an acknowledgement and drop it. The bytes
+ * were therefore paying the platform's per-request body limit for nothing,
+ * and a large attachment bought a 413 error page instead of a submission.
+ *
+ * On submit each file input's `name` is swapped for a hidden `<name>_name`
+ * carrying the filename, so the request never grows with the file and a
+ * document of ANY size submits. Runs after the page's own submit handler and
+ * stands down if that handler cancelled, so validation still decides.
+ *
+ * With JavaScript off the inputs keep their names and the original file POST
+ * still works — that path is the one still bounded by the host.
+ */
+const NAMES_ONLY_UPLOAD_SCRIPT = `<script>
+document.addEventListener('submit', function (event) {
+  if (event.defaultPrevented) return;
+  var form = event.target;
+  if (!form || !form.querySelectorAll) return;
+  Array.prototype.forEach.call(form.querySelectorAll('input[type="file"][name]'), function (input) {
+    var file = input.files && input.files[0];
+    var hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = input.name + '_name';
+    hidden.value = file ? file.name : '';
+    input.removeAttribute('name');
+    form.appendChild(hidden);
+  });
+});
+</script>`;
+
+/** A static form page, served with the names-only upload script attached. */
+function sendForm(res: Response, path: string, next: (err: unknown) => void, rewrite?: (html: string) => string): void {
+  readFile(path, 'utf8').then((raw) => {
+    const html = rewrite ? rewrite(raw) : raw;
+    res.type('html').send(
+      html.includes('</body>') ? html.replace('</body>', `${NAMES_ONLY_UPLOAD_SCRIPT}</body>`) : html + NAMES_ONLY_UPLOAD_SCRIPT,
+    );
+  }, next);
+}
+
+/**
+ * The UAE page is a saved copy of a live Jotform, so its own markup still
+ * points at Jotform: the form posts to submit.jotform.com and its scripts
+ * push attachments to upload.jotform.com. Both are somebody else's servers
+ * with somebody else's upload limits, and neither can be raised from here.
+ *
+ * Pointing them back at this portal is what puts the page under the same
+ * names-only rule as every other form, so an attachment of any size submits.
+ */
+function localiseJotform(html: string): string {
+  return html
+    .split(JOTFORM_SUBMIT_URL).join(UAE_FORM_PATH)
+    .split(JOTFORM_UPLOAD_URL).join('');
+}
+
 async function readMultipart(req: Request): Promise<FormData> {
   const contentType = req.header('content-type') ?? '';
   if (!contentType.toLowerCase().startsWith('multipart/form-data')) {
@@ -721,7 +781,7 @@ function renderQuickVendor(errors: string[] = [], values: Record<string, string>
         </div>
         <button type="submit" style="margin-top:1rem">Submit registration</button>
       </form>
-    </section>`,
+    </section>${NAMES_ONLY_UPLOAD_SCRIPT}`,
   );
 }
 function renderLogin(error = '', returnTo = '/dummy/vendor-registration'): string {
@@ -1313,7 +1373,7 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       res.type('html').send(renderLogin('', AMENDMENT_FORM_PATH));
       return;
     }
-    readFile(amendmentFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+    sendForm(res, amendmentFormPath, next);
   });
 
   router.post('/vendor-registration/record-amendment-renewal', (_req, res) => {
@@ -1332,7 +1392,7 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       res.type('html').send(renderLogin('', WORKFLOW_FORM_PATH));
       return;
     }
-    readFile(workflowFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+    sendForm(res, workflowFormPath, next);
   });
 
   router.post('/vendor-registration/portal-workflow-status', (_req, res) => {
@@ -1351,7 +1411,7 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       res.type('html').send(renderLogin('', PREQUAL_FORM_PATH));
       return;
     }
-    readFile(prequalFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+    sendForm(res, prequalFormPath, next);
   });
 
   router.post('/vendor-registration/supplier-prequalification-update', (_req, res) => {
@@ -1370,7 +1430,7 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       res.type('html').send(renderLogin('', PORTAL_FORM_PATH));
       return;
     }
-    readFile(portalFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+    sendForm(res, portalFormPath, next);
   });
 
   router.post('/vendor-registration/supplier-compliance-portal', (_req, res) => {
@@ -1389,7 +1449,7 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       res.type('html').send(renderLogin('', KSA_SAMA_FORM_PATH));
       return;
     }
-    readFile(ksaSamaFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+    sendForm(res, ksaSamaFormPath, next);
   });
 
   router.post('/vendor-registration/ksa-sama-al-thuraya', (_req, res) => {
@@ -1408,7 +1468,7 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       res.type('html').send(renderLogin('', KSA_DECOR_FORM_PATH));
       return;
     }
-    readFile(ksaDecorFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+    sendForm(res, ksaDecorFormPath, next);
   });
 
   router.post('/vendor-registration/ksa-decor-factory', (_req, res) => {
@@ -1427,7 +1487,7 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       res.type('html').send(renderLogin('', OMAN_FORM_PATH));
       return;
     }
-    readFile(omanFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+    sendForm(res, omanFormPath, next);
   });
 
   router.post('/vendor-registration/oman', (_req, res) => {
@@ -1446,7 +1506,7 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       res.type('html').send(renderLogin('', GLOBAL_FORM_PATH));
       return;
     }
-    readFile(globalFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+    sendForm(res, globalFormPath, next);
   });
 
   router.post('/vendor-registration/abudhabi-sedar-global', (_req, res) => {
@@ -1465,7 +1525,18 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       res.type('html').send(renderLogin('', UAE_FORM_PATH));
       return;
     }
-    readFile(uaeFormPath, 'utf8').then((html) => res.type('html').send(html), next);
+    sendForm(res, uaeFormPath, next, localiseJotform);
+  });
+
+  router.post('/vendor-registration/uae-abu-dhabi', (_req, res) => {
+    res.type('html').send(renderLayout(
+      'Registration received',
+      'form',
+      '<aside class="aside"></aside>',
+      `<section class="card"><h2>Registration received</h2>
+        <p class="muted">UAE / Abu Dhabi vendor registration. Nothing left this machine &mdash; the dummy portal accepted the post and discarded it.</p>
+        <p><a href="/dummy/vendor-registration">Back to the flow picker</a></p></section>`,
+    ));
   });
 
   router.get('/vendor-registration/quick', (req, res) => {
@@ -1480,15 +1551,21 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       const text = (key: string): string => String(form.get(key) ?? '').trim();
       const values = Object.fromEntries(['contact_email', 'entity_type', 'company_name', 'country'].map((key) => [key, text(key)]));
       const fileKeys = ['cr_copy', 'vat_certificate', 'bank_iban', 'national_address'];
-      const files = fileKeys.map((key) => ({ key, file: form.get(key) })).filter(({ file }) => isUpload(file) && file.name);
+      // The document IS its filename here: the page posts names only, so no
+      // request grows with an attachment and no size can be too large. Bytes
+      // still arrive from a JavaScript-off browser, and are still kept.
+      const filename = (key: string): string => {
+        const upload = form.get(key);
+        return isUpload(upload) && upload.name ? upload.name : text(`${key}_name`);
+      };
       const errors = Object.entries(values).filter(([, value]) => !value).map(([key]) => `${key.replace(/_/g, ' ')} is required`);
       if (values.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.contact_email)) errors.push('contact email is not valid');
       if (values.country && !COUNTRIES.includes(values.country)) errors.push('country is invalid');
       if (values.entity_type && !ENTITY_TYPES.includes(values.entity_type)) errors.push('entity type is invalid');
       for (const key of fileKeys) {
-        const upload = form.get(key);
-        if (!(isUpload(upload)) || !upload.name) errors.push(`${key.replace(/_/g, ' ')} PDF is required`);
-        else if (extensionOf(upload.name) !== 'pdf') errors.push(`${key.replace(/_/g, ' ')} must be a PDF`);
+        const name = filename(key);
+        if (!name) errors.push(`${key.replace(/_/g, ' ')} PDF is required`);
+        else if (extensionOf(name) !== 'pdf') errors.push(`${key.replace(/_/g, ' ')} must be a PDF`);
       }
       if (errors.length) { res.status(400).type('html').send(renderQuickVendor(errors, values)); return; }
       const id = randomUUID();
@@ -1496,8 +1573,11 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
       await mkdir(dir, { recursive: true });
       const stored = [];
       for (const [index, key] of fileKeys.entries()) {
-        const upload = form.get(key) as File;
-        const [saved] = await storeFiles(dir, key, [upload], index);
+        const upload = form.get(key);
+        const name = filename(key);
+        const [saved] = isUpload(upload) && upload.name
+          ? await storeFiles(dir, key, [upload], index)
+          : [{ field: key, original_name: name, stored_as: safeFilename(name), size: 0, content_type: 'application/pdf' }];
         stored.push({ key, file: saved });
       }
       const acknowledgement = `QUICK-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${id.slice(0, 8).toUpperCase()}`;
