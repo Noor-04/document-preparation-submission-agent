@@ -71,14 +71,8 @@
   .req-top .n { width:1.5rem; height:1.5rem; flex:none; border-radius:50%; background:var(--accent); color:#fff;
     font-size:.78rem; font-weight:700; display:inline-flex; align-items:center; justify-content:center; }
   .req-top .name { font-weight:600; font-size:.94rem; }
-  .req-meta { margin:.4rem 0 .6rem 2.1rem; font-size:.79rem; color:var(--muted); display:flex; gap:1.1rem; flex-wrap:wrap; }
-  .req-meta code { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.78rem; color:var(--ink); }
   .req-file { margin-left:2.1rem; }
   .req-file input { font-size:.85rem; }
-  .badge { display:inline-block; padding:.1rem .5rem; border-radius:10px; font-size:.72rem; font-weight:700; white-space:nowrap; }
-  .badge.ok { background:#e6f4ec; color:var(--ok); }
-  .badge.soon { background:#fdf3e0; color:var(--warn); }
-  .badge.bad { background:#fdeaea; color:var(--bad); }
 
   /* ---- nav ---- */
   .nav { display:flex; gap:.6rem; align-items:center; margin-top:1.5rem; padding-top:1.2rem; border-top:1px solid var(--line); }
@@ -276,19 +270,13 @@
       <div class="reqs">
         <div class="reqs-head">
           <b>Four requirements &mdash; Sedar Decor Factory Company, KSA</b>
-          <span>Reference numbers and expiry dates are the copies held on the vendor register. Validity is recalculated against today&rsquo;s date.</span>
+          <span>Attach a current PDF for each requirement.</span>
         </div>
 
         <div class="req-row">
           <div class="req-top">
             <span class="n">1</span>
             <span class="name">Chamber of Commerce membership certificate</span>
-            <span class="badge" data-expires="2027-02-14"></span>
-          </div>
-          <div class="req-meta">
-            <span>Ref <code>DOC-2026-00215</code></span>
-            <span>Number <code>243709</code></span>
-            <span>Expires <code>2027-02-14</code></span>
           </div>
           <div class="req-file">
             <input type="file" id="chamberOfCommerceCertificate" name="chamberOfCommerceCertificate" accept="application/pdf,.pdf" required>
@@ -300,12 +288,6 @@
           <div class="req-top">
             <span class="n">2</span>
             <span class="name">ZAKAT certificate</span>
-            <span class="badge" data-expires="2027-04-30"></span>
-          </div>
-          <div class="req-meta">
-            <span>Ref <code>DOC-2026-00224</code></span>
-            <span>Number <code>1117233078</code></span>
-            <span>Expires <code>2027-04-30</code></span>
           </div>
           <div class="req-file">
             <input type="file" id="zakatCertificate" name="zakatCertificate" accept="application/pdf,.pdf" required>
@@ -317,12 +299,6 @@
           <div class="req-top">
             <span class="n">3</span>
             <span class="name">Saudization (Nitaqat) certificate</span>
-            <span class="badge" data-expires="2026-10-20"></span>
-          </div>
-          <div class="req-meta">
-            <span>Ref <code>DOC-2026-00223</code></span>
-            <span>Number <code>201562-20944024</code></span>
-            <span>Expires <code>2026-10-20</code></span>
           </div>
           <div class="req-file">
             <input type="file" id="saudizationCertificate" name="saudizationCertificate" accept="application/pdf,.pdf" required>
@@ -334,12 +310,6 @@
           <div class="req-top">
             <span class="n">4</span>
             <span class="name">ISO 9001 quality certificate</span>
-            <span class="badge" data-expires="2027-07-08"></span>
-          </div>
-          <div class="req-meta">
-            <span>Ref <code>DOC-2026-00227</code></span>
-            <span>Number <code>VSQC099-421264023</code></span>
-            <span>Expires <code>2027-07-08</code></span>
           </div>
           <div class="req-file">
             <input type="file" id="iso9001Certificate" name="iso9001Certificate" accept="application/pdf,.pdf" required>
@@ -367,15 +337,6 @@
     var pages = Array.prototype.slice.call(form.querySelectorAll('section.page'));
     var visited = { 1: true };
 
-    // Expiry badges are computed from today so the form never claims stale validity.
-    var today = new Date(); today.setHours(0, 0, 0, 0);
-    Array.prototype.forEach.call(document.querySelectorAll('.badge[data-expires]'), function (el) {
-      var due = new Date(el.getAttribute('data-expires') + 'T00:00:00');
-      var days = Math.round((due - today) / 86400000);
-      if (days < 0) { el.className = 'badge bad'; el.textContent = 'Expired ' + (-days) + ' days ago'; }
-      else if (days <= 60) { el.className = 'badge soon'; el.textContent = 'Expires in ' + days + ' days'; }
-      else { el.className = 'badge ok'; el.textContent = 'In date · ' + days + ' days left'; }
-    });
 
     function labelFor(el) {
       var lab = form.querySelector('label[for="' + el.id + '"]');
