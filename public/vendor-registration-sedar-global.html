@@ -72,6 +72,7 @@
     font-size:.78rem; font-weight:700; display:inline-flex; align-items:center; justify-content:center; }
   .req-top .name { font-weight:600; font-size:.94rem; }
   .req-file { margin-left:2.1rem; }
+  .req-file .sub { margin:0 0 .35rem; font-size:.77rem; color:var(--muted); }
   .req-file input { font-size:.85rem; }
 
   /* ---- nav ---- */
@@ -99,7 +100,7 @@
   <ol class="steps" id="steps">
     <li aria-current="step" data-step="1"><b>1. Company</b>Legal identity and registration</li>
     <li data-step="2"><b>2. Contact &amp; Address</b>Head office and named contacts</li>
-    <li data-step="3"><b>3. Documents</b>Four required certificates</li>
+    <li data-step="3"><b>3. Documents</b>Four required certificates, plus any extra documents</li>
   </ol>
 
   <form id="vendorForm" action="/dummy/vendor-registration/abudhabi-sedar-global" method="post" enctype="multipart/form-data" novalidate>
@@ -265,12 +266,12 @@
     <!-- ================= PAGE 3 ================= -->
     <section class="page" id="page3" data-step="3" aria-label="Documents" hidden>
       <h2>Required documents</h2>
-      <p class="hint">KSA &mdash; Sedar Decor Factory Company: four requirements. Each must be current on the date of submission; attach a PDF for every row.</p>
+      <p class="hint">KSA &mdash; Sedar Decor Factory Company: four requirements. Each must be current on the date of submission; attach a PDF for every row. Any further supporting documents can be attached at the bottom. There is no limit on file size.</p>
 
       <div class="reqs">
         <div class="reqs-head">
           <b>Four requirements &mdash; Sedar Decor Factory Company, KSA</b>
-          <span>Attach a current PDF for each requirement.</span>
+          <span>Attach a current PDF for each requirement. Files of any size are accepted.</span>
         </div>
 
         <div class="req-row">
@@ -316,6 +317,18 @@
             <span class="err" data-err-for="iso9001Certificate"></span>
           </div>
         </div>
+
+        <div class="req-row">
+          <div class="req-top">
+            <span class="n">+</span>
+            <span class="name">Additional supporting documents</span>
+          </div>
+          <div class="req-file">
+            <p class="sub">Optional. Attach as many documents as needed &mdash; any format, any size.</p>
+            <input type="file" id="additionalDocuments" name="additionalDocuments" multiple>
+            <span class="err" data-err-for="additionalDocuments"></span>
+          </div>
+        </div>
       </div>
 
       <div class="nav">
@@ -350,7 +363,7 @@
         if (el.type === 'file') { if (!el.files || !el.files.length) return labelFor(el) + ' is required'; }
         else if (!v) { return labelFor(el) + ' is required'; }
       }
-      if (el.type === 'file' && el.files && el.files.length) {
+      if (el.type === 'file' && el.hasAttribute('required') && el.files && el.files.length) {
         if (!/\.pdf$/i.test(el.files[0].name)) return labelFor(el) + ' must be a PDF';
       }
       if (!v) return '';

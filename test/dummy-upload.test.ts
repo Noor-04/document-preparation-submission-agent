@@ -1131,3 +1131,52 @@ test('a failed upload is retryable: retry succeeds, then exactly one submit', as
     assert.equal(page.uploadState(), 'ready');
   });
 });
+
+test('the Sedar Global form takes extra documents and posts names only, at any size', async () => {
+  await withPages(async ({ base, postForm }) => {
+    const login = await postForm(
+      '/dummy/vendor-registration/login',
+      new URLSearchParams({ username: 'admin', password: 'admin', return_to: '/dummy/vendor-registration/abudhabi-sedar-global' }),
+    );
+    const cookie = (login.headers.get('set-cookie') ?? '').split(';')[0]!;
+    const html = await (await fetch(`${base}/dummy/vendor-registration/abudhabi-sedar-global`, { headers: { cookie } })).text();
+
+    // The optional extra-documents input: any number, any format, any size.
+    assert.match(html, /id="additionalDocuments"[^>]*\bmultiple\b/);
+    assert.doesNotMatch(html, /id="additionalDocuments"[^>]*\brequired\b/);
+    // Nothing on the page caps a file's size.
+    assert.doesNotMatch(html, /maxsize|max-size|data-maxfilesize/i);
+
+    // The submit hook strips every file input's name and reports one hidden
+    // value per selected file, so a multi-file choice loses no document and
+    // the request carries no bytes.
+    const start = html.lastIndexOf('<script>') + '<script>'.length;
+    const script = html.slice(start, html.indexOf('</script>', start));
+    const form = { appended: [] as { name: string; value: string }[] };
+    const input = {
+      name: 'additionalDocuments',
+      type: 'file',
+      files: [{ name: 'a.pdf' }, { name: 'b.png' }],
+      removeAttribute(): void { this.name = ''; },
+    };
+    const document = {
+      createElement: () => ({ type: '', name: '', value: '' }),
+      addEventListener: (_: string, fn: (e: unknown) => void) => {
+        fn({
+          defaultPrevented: false,
+          target: {
+            querySelectorAll: () => [input],
+            appendChild: (el: { name: string; value: string }) => form.appended.push(el),
+          },
+        });
+      },
+    };
+    new Function('document', script)(document);
+
+    assert.deepEqual(form.appended.map((el) => [el.name, el.value]), [
+      ['additionalDocuments_name', 'a.pdf'],
+      ['additionalDocuments_name', 'b.png'],
+    ]);
+    assert.equal(input.name, '', 'the file input no longer posts its bytes');
+  });
+});

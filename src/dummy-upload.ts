@@ -502,13 +502,20 @@ document.addEventListener('submit', function (event) {
   var form = event.target;
   if (!form || !form.querySelectorAll) return;
   Array.prototype.forEach.call(form.querySelectorAll('input[type="file"][name]'), function (input) {
-    var file = input.files && input.files[0];
-    var hidden = document.createElement('input');
-    hidden.type = 'hidden';
-    hidden.name = input.name + '_name';
-    hidden.value = file ? file.name : '';
+    var field = input.name;
+    // One hidden per selected file, so a "multiple" input reports every
+    // document rather than only the first. No file means one empty value.
+    var names = input.files && input.files.length
+      ? Array.prototype.map.call(input.files, function (file) { return file.name; })
+      : [''];
     input.removeAttribute('name');
-    form.appendChild(hidden);
+    Array.prototype.forEach.call(names, function (name) {
+      var hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = field + '_name';
+      hidden.value = name;
+      form.appendChild(hidden);
+    });
   });
 });
 </script>`;
