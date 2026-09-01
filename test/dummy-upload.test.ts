@@ -1132,7 +1132,7 @@ test('a failed upload is retryable: retry succeeds, then exactly one submit', as
   });
 });
 
-test('the Sedar Global form takes extra documents and posts names only, at any size', async () => {
+test('the Sedar Global form asks for five named documents and posts names only, at any size', async () => {
   await withPages(async ({ base, postForm }) => {
     const login = await postForm(
       '/dummy/vendor-registration/login',
@@ -1141,22 +1141,30 @@ test('the Sedar Global form takes extra documents and posts names only, at any s
     const cookie = (login.headers.get('set-cookie') ?? '').split(';')[0]!;
     const html = await (await fetch(`${base}/dummy/vendor-registration/abudhabi-sedar-global`, { headers: { cookie } })).text();
 
-    // The optional extra-documents input: any number, any format, any size.
-    assert.match(html, /id="additionalDocuments"[^>]*\bmultiple\b/);
-    assert.doesNotMatch(html, /id="additionalDocuments"[^>]*\brequired\b/);
+    // The five boxes the extension's reviewed table binds by name. Singular and
+    // required, every one: a plural name would read as a `multiple` box, which
+    // the extension refuses rather than fills.
+    const boxes = [...html.matchAll(/type="file"[^>]*name="([^"]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(boxes, [
+      'chamberOfCommerceCertificate',
+      'zakatCertificate',
+      'saudizationCertificate',
+      'iso9001Certificate',
+      'commercialRegistration',
+    ]);
+    assert.doesNotMatch(html, /<input[^>]*\bmultiple\b/);
     // Nothing on the page caps a file's size.
     assert.doesNotMatch(html, /maxsize|max-size|data-maxfilesize/i);
 
     // The submit hook strips every file input's name and reports one hidden
-    // value per selected file, so a multi-file choice loses no document and
-    // the request carries no bytes.
+    // value per selected file, so no document is lost and no bytes are posted.
     const start = html.lastIndexOf('<script>') + '<script>'.length;
     const script = html.slice(start, html.indexOf('</script>', start));
-    const form = { appended: [] as { name: string; value: string }[] };
+    const appended: { name: string; value: string }[] = [];
     const input = {
-      name: 'additionalDocuments',
+      name: 'commercialRegistration',
       type: 'file',
-      files: [{ name: 'a.pdf' }, { name: 'b.png' }],
+      files: [{ name: 'cr.pdf' }, { name: 'cr-page2.pdf' }],
       removeAttribute(): void { this.name = ''; },
     };
     const document = {
@@ -1166,16 +1174,16 @@ test('the Sedar Global form takes extra documents and posts names only, at any s
           defaultPrevented: false,
           target: {
             querySelectorAll: () => [input],
-            appendChild: (el: { name: string; value: string }) => form.appended.push(el),
+            appendChild: (el: { name: string; value: string }) => appended.push(el),
           },
         });
       },
     };
     new Function('document', script)(document);
 
-    assert.deepEqual(form.appended.map((el) => [el.name, el.value]), [
-      ['additionalDocuments_name', 'a.pdf'],
-      ['additionalDocuments_name', 'b.png'],
+    assert.deepEqual(appended.map((el) => [el.name, el.value]), [
+      ['commercialRegistration_name', 'cr.pdf'],
+      ['commercialRegistration_name', 'cr-page2.pdf'],
     ]);
     assert.equal(input.name, '', 'the file input no longer posts its bytes');
   });
