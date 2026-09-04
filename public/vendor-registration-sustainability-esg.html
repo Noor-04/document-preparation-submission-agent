@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Supplier Sustainability &amp; ESG Assessment</title>
+<style>
+  :root{
+    --ink:#10201c; --muted:#5d7269; --hair:#d9e3dd; --canvas:#eef2ef; --sheet:#ffffff;
+    --e:#2f9e63; --s:#2f7fbf; --g:#c58a1e;
+    --deep:#0b2b25; --deep-2:#144a3c;
+    --danger:#b3261e;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);line-height:1.55;
+       padding-bottom:5.5rem}
+
+  /* ---------- scorecard banner ---------- */
+  .scorecard{background:linear-gradient(135deg,var(--deep) 0%,var(--deep-2) 100%);color:#eaf3ef}
+  .scorecard .inner{max-width:940px;margin:0 auto;padding:1.9rem 1.25rem 1.6rem;
+       display:flex;gap:1.9rem;align-items:center;flex-wrap:wrap}
+  .scorecard h1{font-size:1.4rem;margin:0 0 .25rem;font-weight:600;letter-spacing:-.01em}
+  .scorecard .kicker{font-family:var(--mono);font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;
+       color:#7fbfa5;margin:0 0 .5rem}
+  .scorecard .blurb{margin:0;font-size:.86rem;color:#a9c6bb;max-width:34rem}
+  .idblock{flex:1 1 22rem;min-width:0}
+
+  .ring{flex:none;position:relative;width:112px;height:112px}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .track{stroke:rgba(255,255,255,.14)}
+  .ring .fill{stroke:#5fd6a0;stroke-linecap:round;transition:stroke-dasharray .35s ease}
+  .ring .val{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+  .ring .val b{display:block;font-size:1.5rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+  .ring .val span{font-family:var(--mono);font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:#7fbfa5}
+
+  .gauges{flex:1 1 15rem;display:flex;flex-direction:column;gap:.6rem;min-width:13rem}
+  .gauge{display:grid;grid-template-columns:1.5rem 1fr 2.4rem;align-items:center;gap:.6rem}
+  .gauge .tag{font-family:var(--mono);font-size:.78rem;font-weight:700}
+  .gauge .tag.E{color:#5fd6a0} .gauge .tag.S{color:#79bce8} .gauge .tag.G{color:#e5be6d}
+  .gauge .rail{height:6px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden}
+  .gauge .rail i{display:block;height:100%;width:0;border-radius:99px;transition:width .3s ease}
+  .gauge.E .rail i{background:#5fd6a0} .gauge.S .rail i{background:#79bce8} .gauge.G .rail i{background:#e5be6d}
+  .gauge .pct{font-family:var(--mono);font-size:.72rem;color:#a9c6bb;text-align:right;font-variant-numeric:tabular-nums}
+
+  /* ---------- sheet ---------- */
+  main{max-width:940px;margin:0 auto;padding:1.6rem 1.25rem 2rem}
+  .sheet{background:var(--sheet);border:1px solid var(--hair);border-radius:12px;
+       padding:1.6rem 1.6rem 1.9rem;margin-bottom:1.1rem;scroll-margin-top:1rem}
+  .sheet:last-of-type{margin-bottom:0}
+  @media(max-width:620px){.sheet{padding:1.2rem 1rem 1.5rem}}
+  .sheet header{border-bottom:2px solid var(--ink);padding-bottom:.7rem;margin-bottom:1.25rem;
+       display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap}
+  .sheet header .no{font-family:var(--mono);font-size:.7rem;letter-spacing:.18em;color:var(--muted)}
+  .sheet header h2{margin:0;font-size:1.16rem;font-weight:600}
+  .lead{color:var(--muted);font-size:.86rem;margin:-.5rem 0 1.4rem}
+
+  fieldset{border:0;margin:0;padding:0}
+
+  /* field rows: hairline-separated, label left / control right */
+  .row{display:grid;grid-template-columns:minmax(0,17rem) minmax(0,1fr);gap:.5rem 1.6rem;
+       padding:.85rem 0;border-bottom:1px solid var(--hair);align-items:start}
+  .row:last-of-type{border-bottom:0}
+  .row.stack{grid-template-columns:1fr}
+  @media(max-width:700px){.row{grid-template-columns:1fr;gap:.4rem}}
+  .row .lab{padding-top:.15rem}
+  .row .lab label{font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink)}
+  .row .lab .req{color:var(--danger)}
+  .row .lab .sub{display:block;margin-top:.2rem;font-size:.76rem;letter-spacing:0;text-transform:none;
+       font-weight:400;color:var(--muted)}
+  .ctl{min-width:0}
+  input[type=text],input[type=email],input[type=date],input[type=number],select,textarea{
+      background:var(--sheet);border:1px solid var(--hair);color:var(--ink);
+      border-radius:8px;padding:.55rem .65rem;font:inherit;font-size:.9rem;width:100%}
+  textarea{min-height:5.2rem;resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--deep-2);outline-offset:1px;border-color:transparent}
+  .err{display:block;color:var(--danger);font-size:.76rem;min-height:1.05rem}
+  .row.invalid .lab label{color:var(--danger)}
+  .row.invalid input,.row.invalid select,.row.invalid textarea{border-color:var(--danger)}
+
+  /* yes / no as a two-cell switch */
+  .yn{display:inline-flex;border:1px solid var(--hair);border-radius:8px;overflow:hidden;background:var(--sheet)}
+  .yn label{display:flex;align-items:center;gap:.4rem;cursor:pointer;padding:.5rem 1.05rem;font-size:.85rem;
+       border-right:1px solid var(--hair);color:var(--muted)}
+  .yn label:last-child{border-right:0}
+  .yn label input{position:absolute;opacity:0;pointer-events:none}
+  .yn label:has(input:checked){background:var(--deep);color:#fff;font-weight:600}
+
+  /* attestations */
+  .attest{display:flex;gap:.65rem;align-items:flex-start;font-size:.87rem;cursor:pointer;
+       border-left:3px solid var(--hair);padding:.15rem 0 .15rem .8rem}
+  .attest input{margin-top:.25rem;flex:none}
+  .attest:has(input:checked){border-left-color:var(--e)}
+  .attest .sub{display:block;margin-top:.15rem;font-size:.78rem;color:var(--muted)}
+
+  /* evidence ledger */
+  .ledger{border:1px solid var(--hair);border-radius:10px;overflow:hidden}
+  .ledger .doc{display:flex;align-items:center;gap:.85rem;padding:.7rem .9rem;border-bottom:1px solid var(--hair);
+       background:var(--sheet)}
+  .ledger .doc:last-child{border-bottom:0}
+  .ledger .doc .idx{font-family:var(--mono);font-size:.72rem;color:var(--muted);flex:none;width:1.5rem}
+  .ledger .doc .m{flex:1;min-width:0}
+  .ledger .doc .m b{display:block;font-size:.87rem;font-weight:600}
+  .ledger .doc .m code{font-size:.72rem;color:var(--muted);font-family:var(--mono);word-break:break-all}
+  .ledger .doc input[type=file]{max-width:220px;font-size:.79rem}
+  .ledger .doc[data-filled=yes]{background:#f2faf5}
+  .ledger .doc[data-filled=yes] .idx{color:var(--e);font-weight:700}
+
+  h3.sec{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+       margin:1.9rem 0 .7rem;font-family:var(--mono);font-weight:700}
+  h3.sec:first-of-type{margin-top:0}
+
+  /* fixed action bar */
+  .actionbar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);
+       border-top:1px solid var(--hair);backdrop-filter:blur(6px);z-index:20}
+  .actionbar .inner{max-width:940px;margin:0 auto;padding:.75rem 1.25rem;display:flex;align-items:center;gap:1rem}
+  .actionbar .status{font-family:var(--mono);font-size:.73rem;color:var(--muted);flex:1;min-width:0;
+       white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .btn{all:unset;cursor:pointer;padding:.6rem 1.2rem;border-radius:8px;font-size:.88rem;font-weight:600}
+  .btn.primary{background:var(--deep);color:#fff}
+  .btn[hidden]{display:none}
+  [hidden]{display:none}
+</style>
+</head>
+<body>
+
+<div class="scorecard">
+  <div class="inner">
+    <div class="idblock">
+      <p class="kicker">Supplier assessment &middot; ESG</p>
+      <h1>Sustainability &amp; ESG Assessment</h1>
+      <p class="blurb">Environmental practices, workforce welfare, and corporate ethics. One page, five sections. Complete every required field, then submit once at the foot of the page.</p>
+    </div>
+    <div class="ring" aria-hidden="true">
+      <svg width="112" height="112" viewBox="0 0 112 112">
+        <circle class="track" cx="56" cy="56" r="48" fill="none" stroke-width="9"></circle>
+        <circle class="fill" id="ringFill" cx="56" cy="56" r="48" fill="none" stroke-width="9"
+                stroke-dasharray="0 301.6"></circle>
+      </svg>
+      <div class="val"><b id="ringPct">0%</b><span>complete</span></div>
+    </div>
+    <div class="gauges" id="gauges">
+      <div class="gauge E"><span class="tag E">E</span><div class="rail"><i data-fill="E"></i></div><span class="pct" data-pct="E">0%</span></div>
+      <div class="gauge S"><span class="tag S">S</span><div class="rail"><i data-fill="S"></i></div><span class="pct" data-pct="S">0%</span></div>
+      <div class="gauge G"><span class="tag G">G</span><div class="rail"><i data-fill="G"></i></div><span class="pct" data-pct="G">0%</span></div>
+    </div>
+  </div>
+</div>
+
+<main>
+<form id="form" method="post" action="/dummy/vendor-registration/sustainability-esg" enctype="multipart/form-data" novalidate>
+
+  <!-- ================= STEP 1 ================= -->
+  <section class="sheet section" data-step="1" data-pillar="">
+    <header><span class="no">01</span><h2>Supplier Identity</h2></header>
+    <p class="lead">Enter the details exactly as they appear on the commercial registration certificate.</p>
+    <fieldset>
+      <div class="row">
+        <div class="lab"><label for="f_company">Registered Company Name <span class="req">*</span></label></div>
+        <div class="ctl">
+          <input type="text" id="f_company" name="registered_company_name" required autocomplete="organization" placeholder="Gulf Horizon Sustainable Supplies LLC" />
+          <span class="err" data-for="f_company"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_crn">Commercial Registration Number <span class="req">*</span></label></div>
+        <div class="ctl">
+          <input type="text" id="f_crn" name="commercial_registration_number" required placeholder="CN-784512" />
+          <span class="err" data-for="f_crn"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_country">Country of Registration <span class="req">*</span></label></div>
+        <div class="ctl">
+          <select id="f_country" name="country_of_registration" required>
+            <option value="">Select a country</option>
+            <option value="AE">United Arab Emirates</option>
+            <option value="SA">Saudi Arabia</option>
+            <option value="OM">Oman</option>
+            <option value="QA">Qatar</option>
+            <option value="BH">Bahrain</option>
+            <option value="KW">Kuwait</option>
+            <option value="JO">Jordan</option>
+            <option value="EG">Egypt</option>
+            <option value="IN">India</option>
+            <option value="GB">United Kingdom</option>
+            <option value="NL">Netherlands</option>
+            <option value="DE">Germany</option>
+            <option value="US">United States</option>
+            <option value="OTHER">Other</option>
+          </select>
+          <span class="err" data-for="f_country"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_category">Supplier Category <span class="req">*</span></label></div>
+        <div class="ctl">
+          <select id="f_category" name="supplier_category" required>
+            <option value="">Select a category</option>
+            <option value="manufacturing">Manufacturing</option>
+            <option value="logistics">Logistics</option>
+            <option value="construction">Construction</option>
+            <option value="professional_services">Professional Services</option>
+            <option value="technology">Technology</option>
+            <option value="other">Other</option>
+          </select>
+          <span class="err" data-for="f_category"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_contact">Primary Contact Name <span class="req">*</span></label></div>
+        <div class="ctl">
+          <input type="text" id="f_contact" name="primary_contact_name" required autocomplete="name" placeholder="Amina Rahman" />
+          <span class="err" data-for="f_contact"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_email">Primary Contact Email <span class="req">*</span></label></div>
+        <div class="ctl">
+          <input type="email" id="f_email" name="primary_contact_email" required autocomplete="email" placeholder="amina.rahman@gulfhorizon.example" />
+          <span class="err" data-for="f_email"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_employees">Employee Count</label></div>
+        <div class="ctl"><input type="number" id="f_employees" name="employee_count" min="0" step="1" placeholder="185" /></div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_revenue">Annual Revenue Band</label></div>
+        <div class="ctl">
+          <select id="f_revenue" name="annual_revenue_band">
+            <option value="">Select a band</option>
+            <option value="under_1m">Under 1M</option>
+            <option value="1m_to_5m">1M to 5M</option>
+            <option value="5m_to_25m">5M to 25M</option>
+            <option value="25m_plus">25M and above</option>
+          </select>
+        </div>
+      </div>
+    </fieldset>
+  </section>
+
+  <!-- ================= STEP 2 ================= -->
+  <section class="sheet section" data-step="2" data-pillar="E">
+    <header><span class="no">02</span><h2>Environmental Practices</h2></header>
+    <p class="lead">Energy, emissions and waste for the most recently completed reporting year.</p>
+    <fieldset>
+      <div class="row">
+        <div class="lab"><label id="l_envpolicy" for="f_envpolicy">Environmental Policy Available <span class="req">*</span></label></div>
+        <div class="ctl">
+          <div class="yn" role="radiogroup" aria-labelledby="l_envpolicy">
+            <label><input type="radio" id="f_envpolicy" name="environmental_policy_available" value="Yes" required /><span>Yes</span></label>
+            <label><input type="radio" name="environmental_policy_available" value="No" /><span>No</span></label>
+          </div>
+          <span class="err" data-for="f_envpolicy"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_ems">Environmental Management System</label></div>
+        <div class="ctl">
+          <select id="f_ems" name="environmental_management_system">
+            <option value="">Select a system</option>
+            <option value="none">None</option>
+            <option value="internal">Internal</option>
+            <option value="iso_14001">ISO 14001</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_energy">Annual Energy Consumption<span class="sub">Include the unit (MWh, GJ, kWh).</span></label></div>
+        <div class="ctl"><input type="text" id="f_energy" name="annual_energy_consumption" placeholder="2,400 MWh" /></div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_renewable">Renewable Energy Percentage<span class="sub">Whole number, 0&ndash;100.</span></label></div>
+        <div class="ctl"><input type="number" id="f_renewable" name="renewable_energy_percentage" min="0" max="100" step="1" placeholder="35" /></div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_carbon">Annual Carbon Emissions<span class="sub">Include the unit (tCO2e).</span></label></div>
+        <div class="ctl"><input type="text" id="f_carbon" name="annual_carbon_emissions" placeholder="1,180 tCO2e" /></div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_target">Carbon Reduction Target Year</label></div>
+        <div class="ctl"><input type="number" id="f_target" name="carbon_reduction_target_year" min="2000" max="2100" step="1" placeholder="2030" /></div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_recycling">Waste Recycling Percentage<span class="sub">Whole number, 0&ndash;100.</span></label></div>
+        <div class="ctl"><input type="number" id="f_recycling" name="waste_recycling_percentage" min="0" max="100" step="1" placeholder="72" /></div>
+      </div>
+      <div class="row">
+        <div class="lab"><label id="l_hazmat" for="f_hazmat">Hazardous Materials Handled <span class="req">*</span></label></div>
+        <div class="ctl">
+          <div class="yn" role="radiogroup" aria-labelledby="l_hazmat">
+            <label><input type="radio" id="f_hazmat" name="hazardous_materials_handled" value="Yes" required /><span>Yes</span></label>
+            <label><input type="radio" name="hazardous_materials_handled" value="No" /><span>No</span></label>
+          </div>
+          <span class="err" data-for="f_hazmat"></span>
+        </div>
+      </div>
+      <div class="row stack">
+        <div class="lab"><label for="f_envsummary">Environmental Practices Summary</label></div>
+        <div class="ctl"><textarea id="f_envsummary" name="environmental_practices_summary" placeholder="Describe recycling, emissions reduction and resource-efficiency measures already in place."></textarea></div>
+      </div>
+    </fieldset>
+  </section>
+
+  <!-- ================= STEP 3 ================= -->
+  <section class="sheet section" data-step="3" data-pillar="S">
+    <header><span class="no">03</span><h2>Workforce &amp; Social Responsibility</h2></header>
+    <p class="lead">Headcount composition, safety record and labour-standards attestations.</p>
+    <fieldset>
+      <div class="row">
+        <div class="lab"><label for="f_workforce">Total Workforce <span class="req">*</span></label></div>
+        <div class="ctl">
+          <input type="number" id="f_workforce" name="total_workforce" required min="0" step="1" placeholder="185" />
+          <span class="err" data-for="f_workforce"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_local">Local Workforce Percentage<span class="sub">Whole number, 0&ndash;100.</span></label></div>
+        <div class="ctl"><input type="number" id="f_local" name="local_workforce_percentage" min="0" max="100" step="1" placeholder="48" /></div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_female">Female Workforce Percentage<span class="sub">Whole number, 0&ndash;100.</span></label></div>
+        <div class="ctl"><input type="number" id="f_female" name="female_workforce_percentage" min="0" max="100" step="1" placeholder="31" /></div>
+      </div>
+      <div class="row">
+        <div class="lab"><label id="l_hse" for="f_hse">Health and Safety Policy Available <span class="req">*</span></label></div>
+        <div class="ctl">
+          <div class="yn" role="radiogroup" aria-labelledby="l_hse">
+            <label><input type="radio" id="f_hse" name="health_and_safety_policy_available" value="Yes" required /><span>Yes</span></label>
+            <label><input type="radio" name="health_and_safety_policy_available" value="No" /><span>No</span></label>
+          </div>
+          <span class="err" data-for="f_hse"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_lti">Lost-Time Incidents Last Year</label></div>
+        <div class="ctl"><input type="number" id="f_lti" name="lost_time_incidents_last_year" min="0" step="1" placeholder="0" /></div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_training">Employee Training Hours</label></div>
+        <div class="ctl"><input type="number" id="f_training" name="employee_training_hours" min="0" step="1" placeholder="1240" /></div>
+      </div>
+      <div class="row stack">
+        <div class="ctl">
+          <label class="attest">
+            <input type="checkbox" id="f_humanrights" name="human_rights_policy_acknowledged" value="yes" required />
+            <span>Human rights policy acknowledged <span class="req">*</span>
+              <span class="sub">Our organisation maintains and applies a human rights policy across its own operations and its supply chain.</span></span>
+          </label>
+          <span class="err" data-for="f_humanrights"></span>
+        </div>
+      </div>
+      <div class="row stack">
+        <div class="ctl">
+          <label class="attest">
+            <input type="checkbox" id="f_childlabour" name="child_and_forced_labour_prohibited" value="yes" required />
+            <span>Child and forced labour prohibited <span class="req">*</span>
+              <span class="sub">No child, forced, bonded or involuntary labour is used at any tier of our operations.</span></span>
+          </label>
+          <span class="err" data-for="f_childlabour"></span>
+        </div>
+      </div>
+      <div class="row stack">
+        <div class="lab"><label for="f_community">Community Engagement Summary</label></div>
+        <div class="ctl"><textarea id="f_community" name="community_engagement_summary" placeholder="Local hiring, training programmes, community investment or supplier development activity."></textarea></div>
+      </div>
+    </fieldset>
+  </section>
+
+  <!-- ================= STEP 4 ================= -->
+  <section class="sheet section" data-step="4" data-pillar="G">
+    <header><span class="no">04</span><h2>Ethics &amp; Governance</h2></header>
+    <p class="lead">Policy coverage, sanctions history and the person accountable for ESG.</p>
+    <fieldset>
+      <div class="row">
+        <div class="lab"><label id="l_coc" for="f_coc">Code of Conduct Available <span class="req">*</span></label></div>
+        <div class="ctl">
+          <div class="yn" role="radiogroup" aria-labelledby="l_coc">
+            <label><input type="radio" id="f_coc" name="code_of_conduct_available" value="Yes" required /><span>Yes</span></label>
+            <label><input type="radio" name="code_of_conduct_available" value="No" /><span>No</span></label>
+          </div>
+          <span class="err" data-for="f_coc"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label id="l_bribery" for="f_bribery">Anti-Bribery Policy Available <span class="req">*</span></label></div>
+        <div class="ctl">
+          <div class="yn" role="radiogroup" aria-labelledby="l_bribery">
+            <label><input type="radio" id="f_bribery" name="anti_bribery_policy_available" value="Yes" required /><span>Yes</span></label>
+            <label><input type="radio" name="anti_bribery_policy_available" value="No" /><span>No</span></label>
+          </div>
+          <span class="err" data-for="f_bribery"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label id="l_coi" for="f_coi">Conflict of Interest Process <span class="req">*</span></label></div>
+        <div class="ctl">
+          <div class="yn" role="radiogroup" aria-labelledby="l_coi">
+            <label><input type="radio" id="f_coi" name="conflict_of_interest_process" value="Yes" required /><span>Yes</span></label>
+            <label><input type="radio" name="conflict_of_interest_process" value="No" /><span>No</span></label>
+          </div>
+          <span class="err" data-for="f_coi"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label id="l_whistle" for="f_whistle">Whistleblowing Channel Available</label></div>
+        <div class="ctl">
+          <div class="yn" role="radiogroup" aria-labelledby="l_whistle">
+            <label><input type="radio" id="f_whistle" name="whistleblowing_channel_available" value="Yes" /><span>Yes</span></label>
+            <label><input type="radio" name="whistleblowing_channel_available" value="No" /><span>No</span></label>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label id="l_dataprot" for="f_dataprot">Data Protection Policy Available</label></div>
+        <div class="ctl">
+          <div class="yn" role="radiogroup" aria-labelledby="l_dataprot">
+            <label><input type="radio" id="f_dataprot" name="data_protection_policy_available" value="Yes" /><span>Yes</span></label>
+            <label><input type="radio" name="data_protection_policy_available" value="No" /><span>No</span></label>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label id="l_sanctions" for="f_sanctions">Sanctions in Last Five Years <span class="req">*</span></label></div>
+        <div class="ctl">
+          <div class="yn" role="radiogroup" aria-labelledby="l_sanctions">
+            <label><input type="radio" id="f_sanctions" name="sanctions_in_last_five_years" value="Yes" required /><span>Yes</span></label>
+            <label><input type="radio" name="sanctions_in_last_five_years" value="No" /><span>No</span></label>
+          </div>
+          <span class="err" data-for="f_sanctions"></span>
+        </div>
+      </div>
+      <div class="row stack" id="sanctionsBox" hidden>
+        <div class="lab"><label for="f_sanctionswhy">Sanctions Explanation <span class="req">*</span><span class="sub">Required because a sanction was declared.</span></label></div>
+        <div class="ctl">
+          <textarea id="f_sanctionswhy" name="sanctions_explanation" placeholder="Describe each regulatory sanction, penalty or enforcement action and the remediation taken."></textarea>
+          <span class="err" data-for="f_sanctionswhy"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_esgname">ESG Responsible Person Name</label></div>
+        <div class="ctl"><input type="text" id="f_esgname" name="esg_responsible_person_name" placeholder="Omar Al Mansoori" /></div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_esgtitle">ESG Responsible Person Title</label></div>
+        <div class="ctl"><input type="text" id="f_esgtitle" name="esg_responsible_person_title" placeholder="Compliance Director" /></div>
+      </div>
+    </fieldset>
+  </section>
+
+  <!-- ================= STEP 5 ================= -->
+  <section class="sheet section" data-step="5" data-pillar="">
+    <header><span class="no">05</span><h2>Evidence &amp; Declaration</h2></header>
+    <p class="lead">Eight PDFs. Use the exact file name shown beneath each row, then declare and submit.</p>
+
+    <h3 class="sec">Evidence ledger</h3>
+    <div class="ledger" id="docs"></div>
+
+    <h3 class="sec">Declaration</h3>
+    <fieldset>
+      <div class="row">
+        <div class="lab"><label for="f_decname">Declaration Name <span class="req">*</span></label></div>
+        <div class="ctl">
+          <input type="text" id="f_decname" name="declaration_name" required placeholder="Omar Al Mansoori" />
+          <span class="err" data-for="f_decname"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_decrole">Declaration Role <span class="req">*</span></label></div>
+        <div class="ctl">
+          <input type="text" id="f_decrole" name="declaration_role" required placeholder="Compliance Director" />
+          <span class="err" data-for="f_decrole"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab"><label for="f_decdate">Declaration Date <span class="req">*</span></label></div>
+        <div class="ctl">
+          <input type="date" id="f_decdate" name="declaration_date" required />
+          <span class="err" data-for="f_decdate"></span>
+        </div>
+      </div>
+      <div class="row stack">
+        <div class="ctl">
+          <label class="attest">
+            <input type="checkbox" id="f_accurate" name="information_is_accurate" value="yes" required />
+            <span>Information is accurate <span class="req">*</span>
+              <span class="sub">The information provided in this assessment is accurate and complete to the best of my knowledge.</span></span>
+          </label>
+          <span class="err" data-for="f_accurate"></span>
+        </div>
+      </div>
+      <div class="row stack">
+        <div class="ctl">
+          <label class="attest">
+            <input type="checkbox" id="f_commits" name="supplier_commits_to_esg_requirements" value="yes" required />
+            <span>Supplier commits to ESG requirements <span class="req">*</span>
+              <span class="sub">We commit to the buyer's ESG requirements and will notify any material change within 30 days.</span></span>
+          </label>
+          <span class="err" data-for="f_commits"></span>
+        </div>
+      </div>
+      <div class="row stack">
+        <div class="lab"><label for="f_comments">Additional Comments</label></div>
+        <div class="ctl"><textarea id="f_comments" name="additional_comments" placeholder="Anything the reviewer should know that is not captured above."></textarea></div>
+      </div>
+    </fieldset>
+  </section>
+</form>
+</main>
+
+<div class="actionbar">
+  <div class="inner">
+    <span class="status" id="status"></span>
+    <button type="submit" form="form" class="btn primary" id="submit">Submit assessment</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var DOCS = [
+    { name: 'environmental_policy',       label: 'Environmental Policy',         file: 'Environmental Policy.pdf' },
+    { name: 'iso_14001_certificate',      label: 'ISO 14001 Certificate',        file: 'ISO 14001 Certificate.pdf' },
+    { name: 'health_and_safety_policy',   label: 'Health and Safety Policy',     file: 'Health and Safety Policy.pdf' },
+    { name: 'employee_welfare_policy',    label: 'Employee Welfare Policy',      file: 'Employee Welfare Policy.pdf' },
+    { name: 'code_of_conduct',            label: 'Code of Conduct',              file: 'Code of Conduct.pdf' },
+    { name: 'anti_bribery_policy',        label: 'Anti-Bribery Policy',          file: 'Anti-Bribery Policy.pdf' },
+    { name: 'sustainability_esg_report',  label: 'Sustainability or ESG Report', file: 'Sustainability or ESG Report.pdf' },
+    { name: 'carbon_emissions_statement', label: 'Carbon Emissions Statement',   file: 'Carbon Emissions Statement.pdf' }
+  ];
+
+  var form = document.getElementById('form');
+  var docs = document.getElementById('docs');
+  DOCS.forEach(function (d, i) {
+    var row = document.createElement('div');
+    row.className = 'doc';
+    row.setAttribute('data-filled', 'no');
+    row.innerHTML =
+      '<span class="idx">' + ('0' + (i + 1)).slice(-2) + '</span>' +
+      '<div class="m"><b>' + d.label + '</b><code>Expected: ' + d.file + '</code></div>' +
+      '<input type="file" accept="application/pdf,.pdf" id="doc_' + i + '" name="' + d.name +
+      '" data-expected-filename="' + d.file + '" aria-label="' + d.label + '" />';
+    docs.appendChild(row);
+    row.querySelector('input').addEventListener('change', function (e) {
+      row.setAttribute('data-filled', e.target.files.length ? 'yes' : 'no');
+      score();
+    });
+  });
+
+  // sanctions_explanation is asked for — and required — only when a sanction is declared
+  var sanctionsBox = document.getElementById('sanctionsBox');
+  var sanctionsWhy = document.getElementById('f_sanctionswhy');
+  [].slice.call(document.getElementsByName('sanctions_in_last_five_years')).forEach(function (r) {
+    r.addEventListener('change', function () {
+      var yes = document.getElementById('f_sanctions').checked;
+      sanctionsBox.hidden = !yes;
+      if (yes) { sanctionsWhy.setAttribute('required', 'required'); }
+      else { sanctionsWhy.removeAttribute('required'); sanctionsWhy.value = ''; }
+      score();
+    });
+  });
+
+  var submit = document.getElementById('submit');
+  var statusLine = document.getElementById('status');
+
+  /* ---------- live scorecard ---------- */
+  var CIRC = 2 * Math.PI * 48;
+  function answered(el) {
+    if (el.type === 'radio') { return !!form.querySelector('[name="' + el.name + '"]:checked'); }
+    if (el.type === 'checkbox') { return el.checked; }
+    if (el.type === 'file') { return el.files.length > 0; }
+    return el.value.trim() !== '';
+  }
+  function fieldsOf(scope) {
+    return [].slice.call(scope.querySelectorAll('input, select, textarea')).filter(function (el) {
+      return !(el.type === 'radio' && el.value !== 'Yes'); // count each radio group once
+    });
+  }
+  function pctOf(scope) {
+    var all = fieldsOf(scope);
+    if (!all.length) return 0;
+    return Math.round(all.filter(answered).length / all.length * 100);
+  }
+  function score() {
+    ['E', 'S', 'G'].forEach(function (p) {
+      var pct = pctOf(form.querySelector('.section[data-pillar="' + p + '"]'));
+      document.querySelector('[data-fill="' + p + '"]').style.width = pct + '%';
+      document.querySelector('[data-pct="' + p + '"]').textContent = pct + '%';
+    });
+    var overall = pctOf(form);
+    document.getElementById('ringPct').textContent = overall + '%';
+    document.getElementById('ringFill').setAttribute(
+      'stroke-dasharray', (CIRC * overall / 100).toFixed(1) + ' ' + CIRC.toFixed(1));
+    var attached = DOCS.filter(function (d, i) { return document.getElementById('doc_' + i).files.length; }).length;
+    var missing = required().filter(function (el) { return !answered(el); }).length;
+    statusLine.textContent = overall + '% complete · ' + attached + '/' + DOCS.length +
+      ' documents attached · ' + (missing ? missing + ' required field' + (missing > 1 ? 's' : '') + ' left' : 'ready to submit');
+  }
+  form.addEventListener('input', score);
+  form.addEventListener('change', score);
+
+  /* ---------- validation on submit ---------- */
+  function required() {
+    return [].slice.call(form.querySelectorAll('[required]')).filter(function (el) {
+      var row = el.closest('.row');
+      return !(row && row.hidden);
+    });
+  }
+  function validate() {
+    var first = null;
+    [].slice.call(form.querySelectorAll('.row')).forEach(function (r) { r.classList.remove('invalid'); });
+    required().forEach(function (el) {
+      var bad = !answered(el);
+      var slot = form.querySelector('.err[data-for="' + el.id + '"]');
+      if (slot) slot.textContent = bad ? 'This field is required.' : '';
+      if (bad) {
+        var row = el.closest('.row');
+        if (row) row.classList.add('invalid');
+        if (!first) first = el;
+      }
+    });
+    if (first) {
+      var sheet = first.closest('.sheet');
+      (sheet || first).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      first.focus({ preventScroll: true });
+    }
+    return !first;
+  }
+
+  form.addEventListener('submit', function (e) { if (!validate()) e.preventDefault(); });
+
+  score();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Supplier Product &amp; Distribution Registration — Sedar Trading Company</title>
+<style>
+  :root{
+    --paper:#faf7f2; --sheet:#ffffff; --ink:#241f1a; --muted:#7a6f63; --hair:#e2dad0;
+    --rule:#241f1a; --accent:#a8552c; --accent-soft:#f6ece5; --ok:#2f7a4f; --danger:#9e2b25;
+    --serif:Georgia,"Times New Roman",serif;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --ar:"Segoe UI","Noto Naskh Arabic","Traditional Arabic",serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.55}
+
+  /* ---------- sticky locator strip ---------- */
+  .strip{position:sticky;top:0;z-index:30;background:var(--sheet);border-bottom:1px solid var(--hair)}
+  .strip .line{height:3px;background:var(--hair)}
+  .strip .line i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s ease}
+  .strip .inner{max-width:1000px;margin:0 auto;padding:.55rem 1.25rem;display:flex;align-items:center;
+       gap:.75rem;flex-wrap:wrap}
+  .crumb{font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;color:var(--muted);
+       text-transform:uppercase;display:flex;gap:.45rem;flex-wrap:wrap}
+  .crumb b{color:var(--ink);font-weight:700}
+  .chip{margin-left:auto;display:flex;gap:.4rem}
+  .chip span{font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;
+       border:1px solid var(--hair);border-radius:4px;padding:.2rem .5rem;color:var(--muted)}
+  .chip span.live{border-color:var(--accent);color:var(--accent)}
+
+  /* ---------- masthead ---------- */
+  .masthead{max-width:1000px;margin:0 auto;padding:2.4rem 1.25rem 1.6rem}
+  .masthead .over{font-family:var(--mono);font-size:.68rem;letter-spacing:.24em;text-transform:uppercase;
+       color:var(--accent);margin:0 0 .55rem}
+  .masthead .title{display:flex;gap:1.5rem;align-items:flex-end;flex-wrap:wrap;
+       border-bottom:3px double var(--rule);padding-bottom:.9rem}
+  .masthead h1{font-family:var(--serif);font-size:2rem;line-height:1.15;margin:0;font-weight:400;flex:1 1 22rem}
+  .masthead .ar-title{font-family:var(--ar);font-size:1.3rem;direction:rtl;color:var(--muted)}
+  .masthead .note{margin:.9rem 0 0;font-size:.88rem;color:var(--muted);max-width:44rem}
+
+  main{max-width:1000px;margin:0 auto;padding:0 1.25rem 4rem}
+
+  /* ---------- section bands ---------- */
+  .band{display:flex;align-items:center;gap:1rem;margin:2.4rem 0 0;padding-bottom:.55rem;
+       border-bottom:1px solid var(--rule)}
+  .band .sq{flex:none;width:2.1rem;height:2.1rem;display:grid;place-items:center;background:var(--ink);
+       color:var(--paper);font-family:var(--mono);font-size:.8rem;font-weight:700}
+  .band h2{font-family:var(--serif);font-size:1.24rem;font-weight:400;margin:0;flex:1;min-width:0}
+  .band .ar{font-family:var(--ar);font-size:1.05rem;direction:rtl;color:var(--muted)}
+  .band .count{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;color:var(--muted);
+       text-transform:uppercase;white-space:nowrap}
+  .band .count b{color:var(--ok)}
+  .blurb{font-size:.85rem;color:var(--muted);margin:.7rem 0 1.1rem}
+
+  /* ---------- dense 3-column grid ---------- */
+  fieldset{border:0;margin:0;padding:0}
+  .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem 1.4rem}
+  @media(max-width:880px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:600px){.grid{grid-template-columns:1fr}}
+  .f{display:flex;flex-direction:column;gap:.28rem;min-width:0}
+  .f.w2{grid-column:span 2} .f.w3{grid-column:1/-1}
+  @media(max-width:880px){.f.w2,.f.w3{grid-column:1/-1}}
+  .f label.top{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem}
+  .f label.top .en{font-size:.76rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+  .f label.top .ar{font-family:var(--ar);font-size:.82rem;direction:rtl;color:var(--muted);font-weight:400;
+       text-transform:none;letter-spacing:0}
+  .req{color:var(--danger)}
+  .f .hint{font-size:.74rem;color:var(--muted)}
+  input[type=text],input[type=email],input[type=tel],input[type=url],input[type=date],
+  input[type=number],select,textarea{
+      background:var(--sheet);border:1px solid var(--hair);border-radius:0;color:var(--ink);
+      padding:.52rem .6rem;font:inherit;font-size:.88rem;width:100%;
+      border-bottom:2px solid var(--hair)}
+  textarea{min-height:5rem;resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:none;border-bottom-color:var(--accent);
+      background:var(--accent-soft)}
+  .err{display:block;color:var(--danger);font-size:.74rem;min-height:1rem}
+  .f.invalid input,.f.invalid select,.f.invalid textarea{border-bottom-color:var(--danger);background:#fdf3f2}
+  .f.invalid label.top .en{color:var(--danger)}
+
+  /* yes / no inline pills */
+  .yn{display:flex;gap:.4rem}
+  .yn label{cursor:pointer;border:1px solid var(--hair);border-bottom-width:2px;padding:.42rem 1rem;
+       font-size:.84rem;color:var(--muted);background:var(--sheet)}
+  .yn label input{position:absolute;opacity:0;pointer-events:none}
+  .yn label:has(input:checked){border-color:var(--accent);background:var(--accent-soft);
+       color:var(--accent);font-weight:700}
+
+  /* ---------- attachments: required / optional columns ---------- */
+  .files{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.4rem;margin-top:.4rem}
+  @media(max-width:820px){.files{grid-template-columns:1fr}}
+  .stack h3{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;
+       color:var(--muted);margin:0 0 .6rem;padding-bottom:.35rem;border-bottom:1px solid var(--hair)}
+  .stack h3 em{font-style:normal;color:var(--accent)}
+  .doc{border:1px solid var(--hair);border-left:3px solid var(--hair);background:var(--sheet);
+       padding:.6rem .75rem;margin-bottom:.55rem}
+  .doc .t{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem}
+  .doc .t b{font-size:.84rem;font-weight:600}
+  .doc .t .n{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+  .doc code{display:block;font-family:var(--mono);font-size:.7rem;color:var(--muted);margin:.15rem 0 .4rem;
+       word-break:break-all}
+  .doc input[type=file]{font-size:.78rem;width:100%}
+  .doc[data-filled=yes]{border-left-color:var(--ok);background:#f5faf6}
+  .doc[data-filled=yes] .t .n{color:var(--ok);font-weight:700}
+  .doc.missing{border-left-color:var(--danger);background:#fdf3f2}
+
+  /* ---------- declaration block ---------- */
+  .declare{border:1px solid var(--rule);border-top:3px double var(--rule);background:var(--sheet);
+       padding:1.4rem;margin-top:1.6rem}
+  .attest{display:flex;gap:.6rem;align-items:flex-start;font-size:.86rem;cursor:pointer;padding:.3rem 0}
+  .attest input{margin-top:.28rem;flex:none}
+  .attest .ar{font-family:var(--ar);direction:rtl;color:var(--muted);display:block;font-size:.82rem}
+  .attest:has(input:checked) .en{font-weight:600}
+
+  .foot{display:flex;align-items:center;gap:1rem;margin-top:1.5rem;flex-wrap:wrap}
+  .foot .status{font-family:var(--mono);font-size:.72rem;color:var(--muted);flex:1;min-width:12rem}
+  .foot .status b{color:var(--danger)}
+  .btn{all:unset;cursor:pointer;background:var(--ink);color:var(--paper);padding:.65rem 1.6rem;
+       font-size:.88rem;font-weight:600;font-family:var(--serif);letter-spacing:.02em}
+  .btn:hover{background:var(--accent)}
+  [hidden]{display:none}
+</style>
+</head>
+<body>
+
+<div class="strip">
+  <div class="line"><i id="progress"></i></div>
+  <div class="inner">
+    <div class="crumb">
+      <span>Saudi Arabia</span><span>&rsaquo;</span>
+      <span>Makkah Province</span><span>&rsaquo;</span>
+      <span>Jeddah</span><span>&rsaquo;</span>
+      <b>Sedar Trading Company</b>
+    </div>
+    <div class="chip">
+      <span>SAR</span>
+      <span>EN / AR</span>
+      <span class="live" id="chipPct">0% complete</span>
+    </div>
+  </div>
+</div>
+
+<div class="masthead">
+  <p class="over">Supplier registration &middot; Product &amp; distribution</p>
+  <div class="title">
+    <h1>Supplier Product &amp; Distribution Registration</h1>
+    <div class="ar-title">تسجيل موردي المنتجات والتوزيع</div>
+  </div>
+  <p class="note">For product manufacturers, distributors and general suppliers to Sedar Trading Company, Jeddah.
+     One page &mdash; complete all five sections, attach the six required certificates, then submit once at the foot of the page.</p>
+</div>
+
+<main>
+<form id="form" method="post" action="/dummy/vendor-registration/ksa-jeddah-sedar-trading" enctype="multipart/form-data" novalidate>
+
+  <!-- ============ 1 ============ -->
+  <section class="section" data-section="1">
+    <div class="band">
+      <span class="sq">1</span>
+      <h2>Company Identity</h2>
+      <span class="ar">هوية الشركة</span>
+      <span class="count" data-count></span>
+    </div>
+    <p class="blurb">Enter the details exactly as they appear on the commercial registration certificate.</p>
+    <fieldset><div class="grid">
+      <div class="f w2">
+        <label class="top" for="f_company"><span class="en">Registered Company Name <span class="req">*</span></span><span class="ar">اسم الشركة المسجل</span></label>
+        <input type="text" id="f_company" name="registered_company_name" required autocomplete="organization" placeholder="Sedar Trading Company" />
+        <span class="err" data-for="f_company"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_trading"><span class="en">Trading Name</span><span class="ar">الاسم التجاري</span></label>
+        <input type="text" id="f_trading" name="trading_name" />
+      </div>
+      <div class="f">
+        <label class="top" for="f_crn"><span class="en">Commercial Registration No. <span class="req">*</span></span><span class="ar">رقم السجل التجاري</span></label>
+        <input type="text" id="f_crn" name="commercial_registration_number" required placeholder="4030XXXXXX" />
+        <span class="err" data-for="f_crn"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_entity"><span class="en">Company Entity Type <span class="req">*</span></span><span class="ar">نوع الكيان</span></label>
+        <select id="f_entity" name="company_entity_type" required>
+          <option value="">Select an entity type</option>
+          <option value="llc">LLC</option>
+          <option value="sole_establishment">Sole Establishment</option>
+          <option value="partnership">Partnership</option>
+          <option value="branch">Branch</option>
+          <option value="joint_stock_company">Joint Stock Company</option>
+        </select>
+        <span class="err" data-for="f_entity"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_incorp"><span class="en">Incorporation Date</span><span class="ar">تاريخ التأسيس</span></label>
+        <input type="date" id="f_incorp" name="incorporation_date" />
+      </div>
+      <div class="f w2">
+        <label class="top" for="f_website"><span class="en">Company Website</span><span class="ar">الموقع الإلكتروني</span></label>
+        <input type="url" id="f_website" name="company_website" placeholder="https://" />
+      </div>
+      <div class="f w3">
+        <label class="top" for="f_address"><span class="en">Company Address <span class="req">*</span></span><span class="ar">عنوان الشركة</span></label>
+        <input type="text" id="f_address" name="company_address" required placeholder="Building, street, district" />
+        <span class="err" data-for="f_address"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_city"><span class="en">City <span class="req">*</span></span><span class="ar">المدينة</span></label>
+        <input type="text" id="f_city" name="city" required placeholder="Jeddah" />
+        <span class="err" data-for="f_city"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_postal"><span class="en">Postal Code</span><span class="ar">الرمز البريدي</span></label>
+        <input type="text" id="f_postal" name="postal_code" placeholder="23442" />
+      </div>
+    </div></fieldset>
+  </section>
+
+  <!-- ============ 2 ============ -->
+  <section class="section" data-section="2">
+    <div class="band">
+      <span class="sq">2</span>
+      <h2>Contact and Ownership</h2>
+      <span class="ar">بيانات التواصل والملكية</span>
+      <span class="count" data-count></span>
+    </div>
+    <p class="blurb">The people Sedar Trading will correspond with, and the person authorised to sign on the supplier's behalf.</p>
+    <fieldset><div class="grid">
+      <div class="f">
+        <label class="top" for="f_contact"><span class="en">Primary Contact Name <span class="req">*</span></span><span class="ar">اسم مسؤول التواصل</span></label>
+        <input type="text" id="f_contact" name="primary_contact_name" required autocomplete="name" />
+        <span class="err" data-for="f_contact"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_position"><span class="en">Primary Contact Position <span class="req">*</span></span><span class="ar">المسمى الوظيفي</span></label>
+        <input type="text" id="f_position" name="primary_contact_position" required />
+        <span class="err" data-for="f_position"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_email"><span class="en">Primary Contact Email <span class="req">*</span></span><span class="ar">البريد الإلكتروني</span></label>
+        <input type="email" id="f_email" name="primary_contact_email" required autocomplete="email" />
+        <span class="err" data-for="f_email"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_mobile"><span class="en">Primary Contact Mobile <span class="req">*</span></span><span class="ar">رقم الجوال</span></label>
+        <input type="tel" id="f_mobile" name="primary_contact_mobile" required placeholder="+966 5X XXX XXXX" />
+        <span class="err" data-for="f_mobile"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_signatory"><span class="en">Authorized Signatory Name <span class="req">*</span></span><span class="ar">اسم المفوض بالتوقيع</span></label>
+        <input type="text" id="f_signatory" name="authorized_signatory_name" required />
+        <span class="err" data-for="f_signatory"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_sigpos"><span class="en">Authorized Signatory Position</span><span class="ar">منصب المفوض بالتوقيع</span></label>
+        <input type="text" id="f_sigpos" name="authorized_signatory_position" />
+      </div>
+      <div class="f">
+        <label class="top" for="f_owner"><span class="en">Owner Name</span><span class="ar">اسم المالك</span></label>
+        <input type="text" id="f_owner" name="owner_name" />
+      </div>
+      <div class="f">
+        <label class="top" for="f_employees"><span class="en">Number of Employees</span><span class="ar">عدد الموظفين</span></label>
+        <input type="number" id="f_employees" name="number_of_employees" min="0" step="1" />
+      </div>
+    </div></fieldset>
+  </section>
+
+  <!-- ============ 3 ============ -->
+  <section class="section" data-section="3">
+    <div class="band">
+      <span class="sq">3</span>
+      <h2>Products and Distribution</h2>
+      <span class="ar">المنتجات والتوزيع</span>
+      <span class="count" data-count></span>
+    </div>
+    <p class="blurb">What you supply, where you are authorised to distribute it, and how quickly you can deliver.</p>
+    <fieldset><div class="grid">
+      <div class="f">
+        <label class="top" for="f_category"><span class="en">Product Category <span class="req">*</span></span><span class="ar">فئة المنتجات</span></label>
+        <select id="f_category" name="product_category" required>
+          <option value="">Select a category</option>
+          <option value="raw_materials">Raw Materials</option>
+          <option value="furniture_and_decor">Furniture and Décor</option>
+          <option value="textiles">Textiles</option>
+          <option value="packaging">Packaging</option>
+          <option value="equipment">Equipment</option>
+          <option value="general_supplies">General Supplies</option>
+          <option value="other">Other</option>
+        </select>
+        <span class="err" data-for="f_category"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_mfr"><span class="en">Manufacturer or Distributor <span class="req">*</span></span><span class="ar">مصنع أو موزع</span></label>
+        <select id="f_mfr" name="manufacturer_or_distributor" required>
+          <option value="">Select a role</option>
+          <option value="manufacturer">Manufacturer</option>
+          <option value="distributor">Distributor</option>
+          <option value="both">Both</option>
+          <option value="agent">Authorised Agent</option>
+        </select>
+        <span class="err" data-for="f_mfr"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_brands"><span class="en">Brand Names</span><span class="ar">العلامات التجارية</span></label>
+        <input type="text" id="f_brands" name="brand_names" placeholder="Comma separated" />
+      </div>
+      <div class="f w3">
+        <label class="top" for="f_products"><span class="en">Products Supplied Summary <span class="req">*</span></span><span class="ar">ملخص المنتجات الموردة</span></label>
+        <textarea id="f_products" name="products_supplied_summary" required placeholder="Describe the product lines, grades and typical order sizes you can supply."></textarea>
+        <span class="err" data-for="f_products"></span>
+      </div>
+      <div class="f w2">
+        <label class="top" for="f_regions"><span class="en">Authorized Distribution Regions</span><span class="ar">مناطق التوزيع المعتمدة</span></label>
+        <input type="text" id="f_regions" name="authorized_distribution_regions" placeholder="Makkah, Riyadh, Eastern Province" />
+      </div>
+      <div class="f">
+        <label class="top" for="f_warehouse"><span class="en">Warehouse Location</span><span class="ar">موقع المستودع</span></label>
+        <input type="text" id="f_warehouse" name="warehouse_location" placeholder="Jeddah Industrial City" />
+      </div>
+      <div class="f">
+        <label class="top" for="f_capacity"><span class="en">Monthly Supply Capacity</span><span class="ar">الطاقة التوريدية الشهرية</span></label>
+        <input type="text" id="f_capacity" name="monthly_supply_capacity" placeholder="ex: 12,000 units" />
+      </div>
+      <div class="f">
+        <label class="top" for="f_delivery"><span class="en">Average Delivery Time (Days)</span><span class="ar">متوسط مدة التوريد (أيام)</span></label>
+        <input type="number" id="f_delivery" name="average_delivery_time_days" min="0" step="1" placeholder="7" />
+      </div>
+      <div class="f">
+        <label class="top" id="l_shipping"><span class="en">International Shipping Available</span><span class="ar">الشحن الدولي متاح</span></label>
+        <div class="yn" role="radiogroup" aria-labelledby="l_shipping">
+          <label><input type="radio" id="f_shipping" name="international_shipping_available" value="Yes" /><span>Yes</span></label>
+          <label><input type="radio" name="international_shipping_available" value="No" /><span>No</span></label>
+        </div>
+      </div>
+    </div></fieldset>
+  </section>
+
+  <!-- ============ 4 ============ -->
+  <section class="section" data-section="4">
+    <div class="band">
+      <span class="sq">4</span>
+      <h2>Commercial and Compliance Details</h2>
+      <span class="ar">البيانات التجارية والامتثال</span>
+      <span class="count" data-count></span>
+    </div>
+    <p class="blurb">Tax, Zakat and banking references. Settlement is in SAR to the account named below.</p>
+    <fieldset><div class="grid">
+      <div class="f">
+        <label class="top" for="f_vat"><span class="en">VAT Registration Number <span class="req">*</span></span><span class="ar">الرقم الضريبي</span></label>
+        <input type="text" id="f_vat" name="vat_registration_number" required placeholder="3000000000003" />
+        <span class="err" data-for="f_vat"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_zakat"><span class="en">Zakat Certificate Number <span class="req">*</span></span><span class="ar">رقم شهادة الزكاة</span></label>
+        <input type="text" id="f_zakat" name="zakat_certificate_number" required />
+        <span class="err" data-for="f_zakat"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_chamber"><span class="en">Chamber Membership Number</span><span class="ar">رقم عضوية الغرفة التجارية</span></label>
+        <input type="text" id="f_chamber" name="chamber_membership_number" />
+      </div>
+      <div class="f w2">
+        <label class="top" for="f_iban"><span class="en">IBAN Number <span class="req">*</span></span><span class="ar">رقم الآيبان</span></label>
+        <input type="text" id="f_iban" name="iban_number" required placeholder="SA00 0000 0000 0000 0000 0000" />
+        <span class="err" data-for="f_iban"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_bank"><span class="en">Bank Name <span class="req">*</span></span><span class="ar">اسم البنك</span></label>
+        <input type="text" id="f_bank" name="bank_name" required />
+        <span class="err" data-for="f_bank"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_beneficiary"><span class="en">Beneficiary Name <span class="req">*</span></span><span class="ar">اسم المستفيد</span></label>
+        <input type="text" id="f_beneficiary" name="beneficiary_name" required />
+        <span class="err" data-for="f_beneficiary"></span>
+      </div>
+      <div class="f">
+        <label class="top" for="f_nitaqat"><span class="en">Nitaqat Classification</span><span class="ar">تصنيف نطاقات</span></label>
+        <select id="f_nitaqat" name="nitaqat_classification">
+          <option value="">Select a band</option>
+          <option value="platinum">Platinum</option>
+          <option value="green_high">High Green</option>
+          <option value="green_medium">Medium Green</option>
+          <option value="green_low">Low Green</option>
+          <option value="yellow">Yellow</option>
+          <option value="red">Red</option>
+        </select>
+      </div>
+      <div class="f">
+        <label class="top" id="l_quality"><span class="en">Quality Certification Available</span><span class="ar">شهادة الجودة متوفرة</span></label>
+        <div class="yn" role="radiogroup" aria-labelledby="l_quality">
+          <label><input type="radio" id="f_quality" name="quality_certification_available" value="Yes" /><span>Yes</span></label>
+          <label><input type="radio" name="quality_certification_available" value="No" /><span>No</span></label>
+        </div>
+      </div>
+      <div class="f">
+        <label class="top" id="l_previous"><span class="en">Previous Sedar Business</span><span class="ar">تعاملات سابقة مع سدار</span></label>
+        <div class="yn" role="radiogroup" aria-labelledby="l_previous">
+          <label><input type="radio" id="f_previous" name="previous_sedar_business" value="Yes" /><span>Yes</span></label>
+          <label><input type="radio" name="previous_sedar_business" value="No" /><span>No</span></label>
+        </div>
+      </div>
+      <div class="f">
+        <label class="top" for="f_prevref"><span class="en">Previous Sedar Project Reference</span><span class="ar">مرجع المشروع السابق</span></label>
+        <input type="text" id="f_prevref" name="previous_sedar_project_reference" placeholder="PO or project number" />
+      </div>
+    </div></fieldset>
+  </section>
+
+  <!-- ============ 5 ============ -->
+  <section class="section" data-section="5">
+    <div class="band">
+      <span class="sq">5</span>
+      <h2>Attachments and Declaration</h2>
+      <span class="ar">المرفقات والإقرار</span>
+      <span class="count" data-count></span>
+    </div>
+    <p class="blurb">Six required certificates and three optional ones. Use the exact file name shown under each row.</p>
+
+    <div class="files">
+      <div class="stack">
+        <h3>Required &mdash; <em id="reqCount">0 of 6 attached</em></h3>
+        <div id="reqDocs"></div>
+      </div>
+      <div class="stack">
+        <h3>Optional &mdash; <em id="optCount">0 of 3 attached</em></h3>
+        <div id="optDocs"></div>
+      </div>
+    </div>
+
+    <div class="declare">
+      <div class="band" style="margin-top:0;border-bottom:1px solid var(--hair)">
+        <h2 style="font-size:1.05rem">Declaration</h2>
+        <span class="ar">الإقرار</span>
+      </div>
+      <fieldset><div class="grid" style="margin-top:1rem">
+        <div class="f">
+          <label class="top" for="f_decname"><span class="en">Declaration Name <span class="req">*</span></span><span class="ar">اسم مقدم الإقرار</span></label>
+          <input type="text" id="f_decname" name="declaration_name" required />
+          <span class="err" data-for="f_decname"></span>
+        </div>
+        <div class="f">
+          <label class="top" for="f_decrole"><span class="en">Declaration Role <span class="req">*</span></span><span class="ar">صفة مقدم الإقرار</span></label>
+          <input type="text" id="f_decrole" name="declaration_role" required />
+          <span class="err" data-for="f_decrole"></span>
+        </div>
+        <div class="f">
+          <label class="top" for="f_decdate"><span class="en">Declaration Date <span class="req">*</span></span><span class="ar">تاريخ الإقرار</span></label>
+          <input type="date" id="f_decdate" name="declaration_date" required />
+          <span class="err" data-for="f_decdate"></span>
+        </div>
+        <div class="f w3">
+          <label class="attest">
+            <input type="checkbox" id="f_confirmed" name="information_confirmed" value="yes" required />
+            <span><span class="en">I confirm the information and attached certificates are correct and current. <span class="req">*</span></span>
+              <span class="ar">أقر بصحة المعلومات والمستندات المرفقة وسريانها.</span></span>
+          </label>
+          <span class="err" data-for="f_confirmed"></span>
+        </div>
+        <div class="f w3">
+          <label class="attest">
+            <input type="checkbox" id="f_terms" name="supplier_terms_accepted" value="yes" required />
+            <span><span class="en">I accept Sedar Trading Company's supplier terms and will notify any change within 30 days. <span class="req">*</span></span>
+              <span class="ar">أوافق على شروط التوريد الخاصة بشركة سدار التجارية وألتزم بإشعارها بأي تغيير خلال ٣٠ يوماً.</span></span>
+          </label>
+          <span class="err" data-for="f_terms"></span>
+        </div>
+        <div class="f w3">
+          <label class="top" for="f_notes"><span class="en">Additional Notes</span><span class="ar">ملاحظات إضافية</span></label>
+          <textarea id="f_notes" name="additional_notes" placeholder="Anything the reviewer should know that is not captured above."></textarea>
+        </div>
+      </div></fieldset>
+
+      <div class="foot">
+        <span class="status" id="status"></span>
+        <button type="submit" class="btn" id="submit">Submit registration</button>
+      </div>
+    </div>
+  </section>
+</form>
+</main>
+
+<script>
+(function () {
+  var REQUIRED_DOCS = [
+    { n: 'commercial_registration_certificate', l: 'Commercial Registration Certificate', a: 'شهادة السجل التجاري' },
+    { n: 'vat_certificate',                     l: 'VAT Certificate',                     a: 'شهادة التسجيل الضريبي' },
+    { n: 'zakat_certificate',                   l: 'Zakat Certificate',                   a: 'شهادة الزكاة' },
+    { n: 'bank_iban_certificate',               l: 'Bank IBAN Certificate',               a: 'شهادة الآيبان البنكي' },
+    { n: 'chamber_of_commerce_certificate',     l: 'Chamber of Commerce Certificate',     a: 'شهادة الغرفة التجارية' },
+    { n: 'product_catalogue',                   l: 'Product Catalogue',                   a: 'كتالوج المنتجات' }
+  ];
+  var OPTIONAL_DOCS = [
+    { n: 'authorized_distributor_certificate', l: 'Authorized Distributor Certificate', a: 'شهادة الوكالة المعتمدة' },
+    { n: 'iso_quality_certificate',            l: 'ISO or Quality Certificate',         a: 'شهادة الجودة / الأيزو' },
+    { n: 'company_profile',                    l: 'Company Profile',                    a: 'الملف التعريفي للشركة' }
+  ];
+
+  var form = document.getElementById('form');
+  var statusLine = document.getElementById('status');
+
+  function mount(list, host, required, offset) {
+    list.forEach(function (d, i) {
+      var id = 'doc_' + (offset + i);
+      var row = document.createElement('div');
+      row.className = 'doc';
+      row.setAttribute('data-filled', 'no');
+      row.innerHTML =
+        '<div class="t"><b>' + d.l + (required ? ' <span class="req">*</span>' : '') + '</b>' +
+        '<span class="n">' + ('0' + (offset + i + 1)).slice(-2) + '</span></div>' +
+        '<code>Expected: ' + d.l + '.pdf</code>' +
+        '<input type="file" accept="application/pdf,.pdf" id="' + id + '" name="' + d.n + '"' +
+        (required ? ' required' : '') +
+        ' data-expected-filename="' + d.l + '.pdf" aria-label="' + d.l + ' — ' + d.a + '" />';
+      host.appendChild(row);
+      row.querySelector('input').addEventListener('change', function (e) {
+        row.setAttribute('data-filled', e.target.files.length ? 'yes' : 'no');
+        if (e.target.files.length) row.classList.remove('missing');
+        score();
+      });
+    });
+  }
+  mount(REQUIRED_DOCS, document.getElementById('reqDocs'), true, 0);
+  mount(OPTIONAL_DOCS, document.getElementById('optDocs'), false, REQUIRED_DOCS.length);
+
+  function answered(el) {
+    if (el.type === 'radio') { return !!form.querySelector('[name="' + el.name + '"]:checked'); }
+    if (el.type === 'checkbox') { return el.checked; }
+    if (el.type === 'file') { return el.files.length > 0; }
+    return el.value.trim() !== '';
+  }
+  function fieldsOf(scope) {
+    return [].slice.call(scope.querySelectorAll('input, select, textarea')).filter(function (el) {
+      return !(el.type === 'radio' && el.value !== 'Yes'); // count each radio group once
+    });
+  }
+  function requiredFields() {
+    return [].slice.call(form.querySelectorAll('[required]'));
+  }
+  function attached(list, offset) {
+    return list.filter(function (d, i) { return document.getElementById('doc_' + (offset + i)).files.length; }).length;
+  }
+
+  function score() {
+    // per-section completion counters
+    [].slice.call(form.querySelectorAll('.section')).forEach(function (sec) {
+      var all = fieldsOf(sec);
+      var done = all.filter(answered).length;
+      sec.querySelector('[data-count]').innerHTML = '<b>' + done + '</b> / ' + all.length + ' filled';
+    });
+    var all = fieldsOf(form);
+    var pct = Math.round(all.filter(answered).length / all.length * 100);
+    document.getElementById('progress').style.width = pct + '%';
+    document.getElementById('chipPct').textContent = pct + '% complete';
+
+    var req = attached(REQUIRED_DOCS, 0);
+    var opt = attached(OPTIONAL_DOCS, REQUIRED_DOCS.length);
+    document.getElementById('reqCount').textContent = req + ' of ' + REQUIRED_DOCS.length + ' attached';
+    document.getElementById('optCount').textContent = opt + ' of ' + OPTIONAL_DOCS.length + ' attached';
+
+    var missing = requiredFields().filter(function (el) { return !answered(el); }).length;
+    statusLine.innerHTML = pct + '% complete &middot; ' + req + '/' + REQUIRED_DOCS.length + ' required documents &middot; ' +
+      (missing ? '<b>' + missing + ' required field' + (missing > 1 ? 's' : '') + ' outstanding</b>' : 'ready to submit');
+  }
+  form.addEventListener('input', score);
+  form.addEventListener('change', score);
+
+  function validate() {
+    var first = null;
+    [].slice.call(form.querySelectorAll('.f')).forEach(function (f) { f.classList.remove('invalid'); });
+    [].slice.call(form.querySelectorAll('.doc')).forEach(function (d) { d.classList.remove('missing'); });
+    requiredFields().forEach(function (el) {
+      if (answered(el)) {
+        var okSlot = form.querySelector('.err[data-for="' + el.id + '"]');
+        if (okSlot) okSlot.textContent = '';
+        return;
+      }
+      var slot = form.querySelector('.err[data-for="' + el.id + '"]');
+      if (slot) slot.textContent = 'This field is required.';
+      var f = el.closest('.f');
+      if (f) f.classList.add('invalid');
+      var doc = el.closest('.doc');
+      if (doc) doc.classList.add('missing');
+      if (!first) first = el;
+    });
+    if (first) {
+      (first.closest('.section') || first).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      first.focus({ preventScroll: true });
+    }
+    return !first;
+  }
+
+  form.addEventListener('submit', function (e) { if (!validate()) e.preventDefault(); });
+  score();
+})();
+</script>
+</body>
+</html>

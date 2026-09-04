@@ -168,6 +168,10 @@ const WORKFLOW_FORM_FILE = 'vendor-registration-portal-workflow.html';
 const WORKFLOW_FORM_PATH = '/dummy/vendor-registration/portal-workflow-status';
 const AMENDMENT_FORM_FILE = 'vendor-registration-amendment.html';
 const AMENDMENT_FORM_PATH = '/dummy/vendor-registration/record-amendment-renewal';
+const ESG_FORM_FILE = 'vendor-registration-sustainability-esg.html';
+const ESG_FORM_PATH = '/dummy/vendor-registration/sustainability-esg';
+const JEDDAH_FORM_FILE = 'vendor-registration-ksa-jeddah-trading.html';
+const JEDDAH_FORM_PATH = '/dummy/vendor-registration/ksa-jeddah-sedar-trading';
 const publicFile = (name: string): string => {
   const cwdPublic = join(process.cwd(), 'public', name);
   return existsSync(cwdPublic)
@@ -183,6 +187,8 @@ const portalFormPath = publicFile(PORTAL_FORM_FILE);
 const prequalFormPath = publicFile(PREQUAL_FORM_FILE);
 const workflowFormPath = publicFile(WORKFLOW_FORM_FILE);
 const amendmentFormPath = publicFile(AMENDMENT_FORM_FILE);
+const esgFormPath = publicFile(ESG_FORM_FILE);
+const jeddahFormPath = publicFile(JEDDAH_FORM_FILE);
 
 export interface StoredFile {
   field: string;
@@ -741,6 +747,18 @@ function renderTemplatePicker(): string {
           <small>Single form · 6 slides · 6 renewed documents</small>
           <p class="muted">Paper-worksheet UI with a chevron breadcrumb and a superseded-versus-revised comparison panel. Replaces an expired credential and realigns the registry record.</p>
           <a href="/dummy/vendor-registration/record-amendment-renewal"><button type="button" style="margin-top:.8rem">Open amendment form</button></a>
+        </div>
+        <div class="doc-card" style="border-color:var(--accent)">
+          <strong>Supplier sustainability &amp; ESG assessment</strong>
+          <small>Single page &middot; 5 sections &middot; live ESG scorecard &middot; 8 evidence documents</small>
+          <p class="muted">Scorecard UI with a live completion ring, three pillar gauges and a docked action bar. Environmental practices, workforce welfare, ethics and governance, then evidence and declaration.</p>
+          <a href="/dummy/vendor-registration/sustainability-esg"><button type="button" style="margin-top:.8rem">Open ESG assessment form</button></a>
+        </div>
+        <div class="doc-card" style="border-color:var(--accent)">
+          <strong>Sedar Trading product &amp; distribution registration</strong>
+          <small>KSA &middot; Jeddah &middot; single page &middot; bilingual EN/AR &middot; 6 required + 3 optional documents</small>
+          <p class="muted">Bilingual trade-catalogue UI: sticky locator strip with a live progress rule, dense three-column grid, per-section filled counters and split required/optional attachment columns.</p>
+          <a href="/dummy/vendor-registration/ksa-jeddah-sedar-trading"><button type="button" style="margin-top:.8rem">Open Sedar Trading form</button></a>
         </div>
         ${COMPANY_TEMPLATES.map((template) => `<form method="post" action="/dummy/vendor-registration/start" class="doc-card">
           <input type="hidden" name="template" value="${esc(template.key)}">
@@ -1373,6 +1391,44 @@ export function dummyUploadRouter(env: NodeJS.ProcessEnv = process.env): Router 
     if (session) sessions.delete(session);
     res.setHeader('Set-Cookie', 'dummy_session=; HttpOnly; SameSite=Lax; Path=/dummy; Max-Age=0');
     res.redirect(303, '/dummy/vendor-registration');
+  });
+
+  router.get('/vendor-registration/ksa-jeddah-sedar-trading', (req, res, next) => {
+    if (!isLoggedIn(req)) {
+      res.type('html').send(renderLogin('', JEDDAH_FORM_PATH));
+      return;
+    }
+    sendForm(res, jeddahFormPath, next);
+  });
+
+  router.post('/vendor-registration/ksa-jeddah-sedar-trading', (_req, res) => {
+    res.type('html').send(renderLayout(
+      'Registration received',
+      'form',
+      '<aside class="aside"></aside>',
+      `<section class="card"><h2>Registration received</h2>
+        <p class="muted">Sedar Trading Company &middot; Jeddah, KSA. Nothing left this machine &mdash; the dummy portal accepted the post and discarded it.</p>
+        <p><a href="/dummy/vendor-registration">Back to the flow picker</a></p></section>`,
+    ));
+  });
+
+  router.get('/vendor-registration/sustainability-esg', (req, res, next) => {
+    if (!isLoggedIn(req)) {
+      res.type('html').send(renderLogin('', ESG_FORM_PATH));
+      return;
+    }
+    sendForm(res, esgFormPath, next);
+  });
+
+  router.post('/vendor-registration/sustainability-esg', (_req, res) => {
+    res.type('html').send(renderLayout(
+      'Assessment received',
+      'form',
+      '<aside class="aside"></aside>',
+      `<section class="card"><h2>Assessment received</h2>
+        <p class="muted">Supplier sustainability &amp; ESG assessment. Nothing left this machine &mdash; the dummy portal accepted the post and discarded it.</p>
+        <p><a href="/dummy/vendor-registration">Back to the flow picker</a></p></section>`,
+    ));
   });
 
   router.get('/vendor-registration/record-amendment-renewal', (req, res, next) => {
